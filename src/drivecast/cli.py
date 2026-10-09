@@ -343,6 +343,37 @@ def leakage(
 
 
 @app.command()
+def sequence(
+    quarter: str,
+    gold: Annotated[str, typer.Option(help="Directory of the gold training samples.")] = str(
+        LAKE / "gold"
+    ),
+    silver: Annotated[str, typer.Option(help="Directory of the silver quarters.")] = str(
+        LAKE / "silver"
+    ),
+    scores: Annotated[Path, typer.Option(help="The backtest scores of QUARTER.")] = Path(
+        "runs/backtest/scores.parquet"
+    ),
+    out_dir: Annotated[Path, typer.Option("--out")] = Path("runs/sequence"),
+    epochs: int = 8,
+    threads: int = 4,
+) -> None:
+    """Fit a GRU over 30-day windows and compare it with the backtest models on weekly checks."""
+    import duckdb
+
+    from drivecast.models.sequence import run_quarter
+
+    result = run_quarter(
+        duckdb.connect(), quarter, gold.rstrip("/"), silver.rstrip("/"), scores.as_posix(),
+        threads=threads, epochs=epochs,
+    )  # fmt: skip
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / f"sequence_{quarter}.json").write_text(json.dumps(result, indent=2) + "\n")
+    for name, m in result["models"].items():
+        typer.echo(f"{quarter} {name:9s} AP {m['average_precision']:.3f}")
+
+
+@app.command()
 def version() -> None:
     """Print the package version."""
     typer.echo(__version__)

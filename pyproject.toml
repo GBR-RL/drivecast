@@ -24,6 +24,8 @@ dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.11", "pandas-stubs"]
 survival = ["lifelines>=0.29", "scipy>=1.11"]
 spark = ["pyspark>=3.5"]
 models = ["lightgbm>=4.3", "scikit-learn>=1.5"]
+# torch comes from the CPU wheel index: pip install torch --index-url https://download.pytorch.org/whl/cpu
+sequence = ["torch>=2.3"]
 
 [project.scripts]
 drivecast = "drivecast.cli:app"
@@ -54,3 +56,10 @@ files = ["src/drivecast"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+
+# torch is optional: typed when installed, Any when not (as in the lint CI job).
+[[tool.mypy.overrides]]
+module = "drivecast.models.sequence"
+disallow_subclassing_any = false
+disallow_untyped_calls = false
+warn_unused_ignores = false

@@ -400,6 +400,76 @@ def staleness(
 
 
 @app.command()
+def policies(
+    paths: list[Path],
+    out: Annotated[Path, typer.Option("--out", "-o")] = Path("docs/results/policies.json"),
+) -> None:
+    """Retraining policies and drift against decay, from the staleness results."""
+    from drivecast.mlops.policies import compare
+
+    result = compare([json.loads(p.read_text()) for p in paths])
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(result, indent=2) + "\n")
+    for p in result["policies"]:
+        typer.echo(
+            f"{p['policy']:12s} retrains {p['retrains']:2d}  "
+            f"mean AP {p['mean']['average_precision']:.3f}"
+        )
+
+
+@app.command()
+def gate(
+    backtest_dir: Annotated[Path, typer.Option("--backtest", help="backtest_*.json, scores_*")],
+    out: Annotated[Path, typer.Option("--out", "-o")] = Path("docs/results/gate.json"),
+    margin: float = 0.05,
+) -> None:
+    """Champion and challenger: the model family deployed each quarter."""
+    import duckdb
+
+    from drivecast.mlops.gate import simulate, validation_ap
+    from drivecast.mlops.staleness import shift
+
+    results = {
+        p.stem.removeprefix("backtest_"): json.loads(p.read_text())
+        for p in sorted(backtest_dir.glob("backtest_*.json"))
+    }
+    test_ap = {
+        q: {f: m["average_precision"] for f, m in r["models"].items()} for q, r in results.items()
+    }
+    con = duckdb.connect()
+    validation = {}
+    for q in results:
+        scores = backtest_dir / f"scores_{shift(q, -1)}.parquet"
+        if scores.exists():
+            validation[q] = validation_ap(con, scores.as_posix(), q)
+    result = simulate(test_ap, validation, margin=margin)
+    result["validation"] = validation
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(result, indent=2) + "\n")
+    for name, value in result["mean_test_ap"].items():
+        typer.echo(f"{name:16s} mean AP {value:.4f}")
+    typer.echo(f"promotions: {result['promotions']}")
+
+
+@app.command()
+def registry(
+    backtest_dir: Annotated[Path, typer.Option("--backtest", help="backtest_*.json")],
+    models_dir: Annotated[Path, typer.Option("--models", help="Fitted models per quarter.")],
+    gate_path: Annotated[Path, typer.Option("--gate")] = Path("docs/results/gate.json"),
+    store: Path = Path("mlflow"),
+) -> None:
+    """Build the MLflow store: every backtest run, the models, and the champion alias."""
+    from drivecast.mlops.registry import build
+
+    backtests = {
+        p.stem.removeprefix("backtest_"): json.loads(p.read_text())
+        for p in sorted(backtest_dir.glob("backtest_*.json"))
+    }
+    summary = build(store, backtests, models_dir, json.loads(gate_path.read_text()))
+    typer.echo(json.dumps(summary, indent=2))
+
+
+@app.command()
 def version() -> None:
     """Print the package version."""
     typer.echo(__version__)

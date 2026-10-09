@@ -1,0 +1,104 @@
+name: MLOps
+
+# Model operations over the whole backtest: the champion/challenger gate (from the backtest
+# scores), retraining policies and drift against decay (from the staleness results), and an
+# MLflow store with every backtest run, the fitted models and the champion alias, published with
+# the MLOps release.
+on:
+  workflow_dispatch:
+    inputs:
+      backtest:
+        description: Release that holds the backtest results and scores
+        default: backtest-v1
+      release:
+        description: Release that holds the staleness results and the models
+        default: mlops-v1
+
+permissions:
+  contents: write
+
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install --quiet -e ".[models]"
+      - name: Download the backtest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "${{ inputs.backtest }}" --dir backtest \
+            --pattern 'backtest_*.json' --pattern 'scores_*.parquet'
+          du -sh backtest
+      - run: drivecast gate --backtest backtest --out gate.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gate
+          path: gate.json
+          retention-days: 90
+
+  policies:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install --quiet -e ".[models]"
+      - name: Download the staleness results
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "${{ inputs.release }}" --dir staleness --pattern 'staleness_*.json'
+      - run: drivecast policies staleness/staleness_*.json --out policies.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: policies
+          path: policies.json
+          retention-days: 90
+
+  registry:
+    needs: gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      MLFLOW_DISABLE_AGENT_HINT: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install --quiet -e ".[models,mlops]"
+      - uses: actions/download-artifact@v4
+        with:
+          name: gate
+      - name: Download the backtest results and the models
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "${{ inputs.backtest }}" --dir backtest --pattern 'backtest_*.json'
+          gh release download "${{ inputs.release }}" --dir models \
+            --pattern 'lightgbm_*.txt' --pattern 'logreg_*.joblib'
+          ls models | wc -l
+      - run: drivecast registry --backtest backtest --models models --gate gate.json --store mlflow
+      - name: Publish the MLflow store
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tar czf mlflow-store.tar.gz mlflow
+          du -h mlflow-store.tar.gz
+          gh release upload "${{ inputs.release }}" mlflow-store.tar.gz --clobber
+      - uses: actions/upload-artifact@v4
+        with:
+          name: registry
+          path: mlflow/registry.json
+          retention-days: 90

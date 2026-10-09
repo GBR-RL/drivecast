@@ -27,12 +27,12 @@ def write_bronze(path: Path, rows: list[Row]) -> Path:
 
 @pytest.fixture
 def bronze(tmp_path: Path) -> Callable[[list[Row]], Any]:
-    """A DuckDB connection with the view "bronze" over the given rows."""
+    """A DuckDB connection with the view "bronze" over the given rows, and the file behind it."""
 
     def make(rows: list[Row]) -> Any:
         path = write_bronze(tmp_path / "bronze" / "drive_stats_test.parquet", rows)
         con = duckdb.connect()
         con.execute(f"CREATE VIEW bronze AS SELECT * FROM read_parquet('{path.as_posix()}')")
-        return con
+        return con, [path.as_posix()]
 
     return make

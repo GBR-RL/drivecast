@@ -31,7 +31,8 @@ def test_silver_applies_the_quality_rules(bronze: Callable[..., Any], tmp_path: 
         ]
     )
     drives = tmp_path / "drives.parquet"
-    assert silver.build_drives(con, drives) == 4
+    bronze_file = (tmp_path / "bronze" / "drive_stats_test.parquet").as_posix()
+    assert silver.build_drives(con, [bronze_file, bronze_file], drives) == 4
     table = {
         r[0]: r[1:]
         for r in duckdb.sql(

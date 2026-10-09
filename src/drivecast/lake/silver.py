@@ -33,31 +33,74 @@ MANUFACTURER = """CASE
     ELSE 'other' END"""
 
 
-def drives_sql() -> str:
-    """One row per serial number over all of bronze."""
+def month_partial_sql(file: str) -> str:
+    """Per-drive aggregates of one bronze month (one row per drive, model and capacity)."""
     return f"""
-    SELECT serial_number,
-        mode(model) AS model,
-        count(DISTINCT model) AS model_names,
-        mode(capacity_bytes) FILTER (WHERE capacity_bytes > 0) AS capacity_bytes,
+    SELECT serial_number, model, capacity_bytes,
+        count(*) AS n,
         min(date) AS first_date,
         max(date) AS last_date,
         count(DISTINCT date) AS days,
         min(date) FILTER (WHERE failure = 1) AS failure_date,
-        arg_min(smart_9_raw, date) FILTER (WHERE smart_9_raw IS NOT NULL) AS hours_first,
         min(date) FILTER (WHERE smart_9_raw IS NOT NULL) AS hours_first_date,
+        arg_min(smart_9_raw, date) FILTER (WHERE smart_9_raw IS NOT NULL) AS hours_first,
+        max(date) FILTER (WHERE smart_9_raw IS NOT NULL) AS hours_last_date,
         arg_max(smart_9_raw, date) FILTER (WHERE smart_9_raw IS NOT NULL) AS hours_last,
         bool_or({not_data_drive_sql()}) AS not_data_drive
-    FROM bronze GROUP BY serial_number
+    FROM read_parquet('{file}') GROUP BY serial_number, model, capacity_bytes
     """
 
 
-def build_drives(con: Any, out: Path) -> int:
+def combine_sql(partials: str) -> str:
+    """One row per drive from the monthly partials."""
+    return f"""
+    WITH p AS (SELECT * FROM read_parquet({partials})),
+    models AS (
+        SELECT serial_number, arg_max(model, n) AS model, count(*) AS model_names
+        FROM (SELECT serial_number, model, sum(n) AS n FROM p GROUP BY 1, 2) GROUP BY 1
+    ),
+    capacities AS (
+        SELECT serial_number, arg_max(capacity_bytes, n) AS capacity_bytes
+        FROM (SELECT serial_number, capacity_bytes, sum(n) AS n FROM p
+              WHERE capacity_bytes > 0 GROUP BY 1, 2) GROUP BY 1
+    ),
+    spans AS (
+        SELECT serial_number,
+            min(first_date) AS first_date,
+            max(last_date) AS last_date,
+            sum(days) AS days,
+            min(failure_date) AS failure_date,
+            arg_min(hours_first, hours_first_date) AS hours_first,
+            min(hours_first_date) AS hours_first_date,
+            arg_max(hours_last, hours_last_date) AS hours_last,
+            bool_or(not_data_drive) AS not_data_drive
+        FROM p GROUP BY 1
+    )
+    SELECT s.serial_number, m.model, m.model_names, c.capacity_bytes, s.first_date,
+        s.last_date, s.days, s.failure_date, s.hours_first, s.hours_first_date, s.hours_last,
+        s.not_data_drive
+    FROM spans s JOIN models m USING (serial_number)
+    LEFT JOIN capacities c USING (serial_number)
+    """
+
+
+def build_drives(con: Any, files: list[str], out: Path, work: Path | None = None) -> int:
+    """The drive table, aggregated month by month so no query holds the whole lake."""
+    work = work or out.parent / "drive_partials"
+    work.mkdir(parents=True, exist_ok=True)
+    partials = []
+    for i, file in enumerate(files):
+        partial = work / f"partial_{i:04d}.parquet"
+        con.execute(f"COPY ({month_partial_sql(file)}) TO '{partial.as_posix()}' (FORMAT parquet)")
+        partials.append(f"'{partial.as_posix()}'")
     out.parent.mkdir(parents=True, exist_ok=True)
+    combined = combine_sql("[" + ", ".join(partials) + "]")
     con.execute(
-        f"COPY (SELECT *, {MANUFACTURER} AS manufacturer FROM ({drives_sql()}) "
+        f"COPY (SELECT *, {MANUFACTURER} AS manufacturer FROM ({combined}) "
         f"ORDER BY serial_number) TO '{out.as_posix()}' (FORMAT parquet, COMPRESSION zstd)"
     )
+    for partial in work.glob("partial_*.parquet"):
+        partial.unlink()
     (n,) = con.execute(f"SELECT count(*) FROM read_parquet('{out.as_posix()}')").fetchone()
     return int(n)
 

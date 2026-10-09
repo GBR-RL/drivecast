@@ -1,0 +1,39 @@
+name: Leakage
+
+# The same model and metric under three ways to hold out data: by time (as deployed), by random
+# rows and by random drives, for one test quarter per year.
+on:
+  workflow_dispatch:
+    inputs:
+      quarters:
+        description: Comma-separated test quarters
+        default: 2016Q2,2017Q2,2018Q2,2019Q2,2020Q2,2021Q2,2022Q2,2023Q2,2024Q2,2025Q2,2026Q1
+      gold:
+        description: Release that holds the gold layer
+        default: gold-v1
+
+permissions:
+  contents: read
+
+jobs:
+  leakage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install --quiet -e ".[models]"
+      - name: Download the training samples
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "${{ inputs.gold }}" --dir gold --pattern 'train_*.parquet'
+      - run: drivecast leakage "${{ inputs.quarters }}" --gold gold --out leakage.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: leakage
+          path: leakage.json
+          retention-days: 90

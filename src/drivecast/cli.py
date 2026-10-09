@@ -314,6 +314,35 @@ def backtest_summary(
 
 
 @app.command()
+def leakage(
+    quarters: Annotated[str, typer.Argument(help="Comma-separated test quarters.")],
+    gold: Annotated[str, typer.Option(help="Directory or URL prefix of the gold files.")] = str(
+        LAKE / "gold"
+    ),
+    out: Path = Path("docs/results/leakage.json"),
+    threads: int = 4,
+) -> None:
+    """Time split against random-row and random-drive splits, with the same model and metric."""
+    import duckdb
+
+    from drivecast.models.leakage import compare_splits
+
+    con = duckdb.connect()
+    results = []
+    for quarter in [q.strip() for q in quarters.split(",")]:
+        r = compare_splits(con, gold.rstrip("/"), quarter, threads=threads)
+        results.append(r)
+        typer.echo(
+            f"{quarter}: time {r['time']:.3f}  random drives {r['random_drives']:.3f}  "
+            f"random rows {r['random_rows']:.3f}"
+        )
+    mean = {k: sum(r[k] for r in results) / len(results)
+            for k in ("time", "random_drives", "random_rows")}  # fmt: skip
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps({"mean": mean, "quarters": results}, indent=2) + "\n")
+
+
+@app.command()
 def version() -> None:
     """Print the package version."""
     typer.echo(__version__)

@@ -83,3 +83,29 @@ def test_models_rank_an_obvious_signal_above_noise() -> None:
         model = make(name, threads=1).fit(x, y, w)
         s = model.score(x)
         assert s[y].mean() > s[~y].mean()
+
+
+def test_random_row_splits_look_better_than_time_splits(tmp_path: Path) -> None:
+    from drivecast.models import leakage
+
+    # Each drive has a fixed quirk (its own offset) that a model can memorise, and failing drives
+    # show a weak real signal. Random rows put a drive's other days in training; time does not.
+    rng = np.random.default_rng(3)
+    quarters = ["2019Q1", "2019Q2", "2019Q3", "2019Q4", "2020Q1"]
+    starts = [date(2019, 1, 1), date(2019, 4, 1), date(2019, 7, 1), date(2019, 10, 1),
+              date(2020, 1, 1)]  # fmt: skip
+    for q, start in zip(quarters, starts, strict=True):
+        rows = []
+        for d in range(200):
+            drive = f"{q}-{d}"  # new drives every quarter
+            quirk = rng.normal()
+            fails = rng.random() < 0.2
+            for t in range(0, 80, 8):
+                rows.append(dict.fromkeys(feature_names(), 0.0) | {
+                    "serial_number": drive, "date": start + timedelta(days=t),
+                    "smart_1": quirk + rng.normal(scale=0.01),
+                    "smart_5": fails * 0.3 + rng.normal(),
+                    "label": fails, "label_complete": True, "weight": 1.0})  # fmt: skip
+        pd.DataFrame(rows).to_parquet(tmp_path / f"train_{q}.parquet")
+    r = leakage.compare_splits(duckdb.connect(), tmp_path.as_posix(), "2020Q1", threads=1)
+    assert r["random_rows"] > r["time"]

@@ -27,6 +27,7 @@ class Published:
     analyzed: int | None = None  # data drives of the included models at quarter end
     drive_days: int | None = None
     failures: int | None = None
+    note: str | None = None
 
 
 BLOG = "https://www.backblaze.com/blog/backblaze-drive-stats-for-"
@@ -48,6 +49,9 @@ PUBLISHED: tuple[Published, ...] = (
         "2026Q2", f"{BLOG}q2-2026/", afr=1.73, min_drives=100, min_drive_days=10_000,
         drives=359_101, boot_drives=3_881, analyzed=354_415, drive_days=31_553_350,
         failures=1_498,
+        note="The published fleet count is about 3,900 drives above what the daily files show "
+        "on any day of the last week of June (354,846 to 355,238 reports a day), while the drive "
+        "days, which come from the daily files, match exactly.",
     ),
 )  # fmt: skip
 
@@ -122,6 +126,7 @@ def reconcile(con: Any, published: tuple[Published, ...] = PUBLISHED) -> list[di
                 "source": pub.url,
                 "rule": {"min_drives": pub.min_drives, "min_drive_days": pub.min_drive_days},
                 "published": {f: getattr(pub, f) for f in fields},
+                "note": pub.note,
                 "lake": ours,
             }
         )

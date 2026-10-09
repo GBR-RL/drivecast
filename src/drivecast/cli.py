@@ -179,6 +179,47 @@ def _plain(value: object) -> object:
 
 
 @app.command()
+def features(
+    quarter: str,
+    silver_dir: Annotated[
+        str, typer.Option("--silver", help="Silver directory or URL prefix.")
+    ] = str(LAKE / "silver"),
+    drives_path: Annotated[str, typer.Option("--drives")] = str(LAKE / "silver" / "drives.parquet"),
+    out_dir: Annotated[Path, typer.Option("--out")] = LAKE / "gold",
+    negative_rate: float = 0.01,
+    threads: int | None = None,
+    memory_limit: str | None = None,
+) -> None:
+    """Write one quarter of features and its training sample (gold layer)."""
+    from drivecast.features.build import build_quarter, previous_quarter, sample_training_rows
+    from drivecast.lake.views import connect
+
+    con = connect(threads=threads, memory_limit=memory_limit, temp=RAW / "duckdb_tmp")
+    if silver_dir.startswith("http") or drives_path.startswith("http"):
+        con.execute("INSTALL httpfs; LOAD httpfs")
+    names = [f"silver_{q}.parquet" for q in (previous_quarter(quarter), quarter)]
+    files = [f"{silver_dir.rstrip('/')}/{n}" for n in names]
+    if silver_dir.startswith("http"):
+        import httpx
+
+        files = [f for f in files if httpx.head(f, follow_redirects=True, timeout=60).is_success]
+    else:
+        files = [f for f in files if Path(f).exists()]
+    stats = build_quarter(con, quarter, files, drives_path, out_dir / f"features_{quarter}.parquet")
+    stats["training"] = sample_training_rows(
+        con,
+        out_dir / f"features_{quarter}.parquet",
+        out_dir / f"train_{quarter}.parquet",
+        negative_rate=negative_rate,
+    )
+    (out_dir / f"features_{quarter}.json").write_text(json.dumps(stats, indent=2) + "\n")
+    typer.echo(
+        f"{quarter}: {stats['rows']:,} rows, {stats['positive_rows']:,} positive, "
+        f"{stats['training']['rows']:,} training rows, {stats['bytes'] / 2**20:.0f} MiB"
+    )
+
+
+@app.command()
 def version() -> None:
     """Print the package version."""
     typer.echo(__version__)

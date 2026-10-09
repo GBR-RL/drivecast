@@ -99,6 +99,60 @@ def quality(
 
 
 @app.command()
+def drives(
+    lake: Annotated[str, typer.Option(help='Bronze directory, or "release:<tag>".')] = str(
+        LAKE / "bronze"
+    ),
+    out: Path = LAKE / "silver" / "drives.parquet",
+    threads: int | None = None,
+    memory_limit: str | None = None,
+) -> None:
+    """Build the drive table (one row per serial number) from all of bronze."""
+    from drivecast.lake.silver import build_drives
+    from drivecast.lake.views import connect, register_bronze
+
+    con = connect(threads=threads, memory_limit=memory_limit, temp=RAW / "duckdb_tmp")
+    register_bronze(con, lake)
+    typer.echo(f"{build_drives(con, out):,} drives -> {out}")
+
+
+@app.command()
+def quarters() -> None:
+    """Print the quarters of the lake as JSON (the silver matrix)."""
+    from drivecast.lake.silver import quarters as all_quarters
+
+    typer.echo(json.dumps(all_quarters()))
+
+
+@app.command()
+def silver(
+    quarter: str,
+    lake: Annotated[str, typer.Option(help='Bronze directory, or "release:<tag>".')] = str(
+        LAKE / "bronze"
+    ),
+    drives_path: Annotated[str, typer.Option("--drives")] = str(LAKE / "silver" / "drives.parquet"),
+    out_dir: Annotated[Path, typer.Option("--out")] = LAKE / "silver",
+    threads: int | None = None,
+    memory_limit: str | None = None,
+) -> None:
+    """Write one quarter of the silver layer."""
+    from drivecast.lake.silver import build_quarter
+    from drivecast.lake.views import connect, register_bronze
+    from drivecast.quality.published import quarter_months
+
+    con = connect(threads=threads, memory_limit=memory_limit, temp=RAW / "duckdb_tmp")
+    if drives_path.startswith("http"):
+        con.execute("INSTALL httpfs; LOAD httpfs")
+    register_bronze(con, lake, months=quarter_months(quarter))
+    stats = build_quarter(con, quarter, drives_path, out_dir / f"silver_{quarter}.parquet")
+    (out_dir / f"silver_{quarter}.json").write_text(json.dumps(stats, indent=2) + "\n")
+    typer.echo(
+        f"{quarter}: {stats['rows']:,} rows, {stats['drives']:,} drives, "
+        f"{stats['failures']:,} failures, {stats['bytes'] / 2**20:.0f} MiB"
+    )
+
+
+@app.command()
 def version() -> None:
     """Print the package version."""
     typer.echo(__version__)

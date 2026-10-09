@@ -59,6 +59,12 @@ def quarter_bounds(quarter: str) -> tuple[str, str]:
     return f"{year}-{start_month:02d}-01", end
 
 
+def quarter_months(quarter: str) -> list[str]:
+    start, _ = quarter_bounds(quarter)
+    year, month = int(start[:4]), int(start[5:7])
+    return [f"{year}-{m:02d}" for m in range(month, month + 3)]
+
+
 def afr(failures: int, drive_days: int) -> float:
     """Annualized failure rate in percent, as Backblaze defines it."""
     return 100.0 * failures / (drive_days / AFR_DAYS) if drive_days else 0.0

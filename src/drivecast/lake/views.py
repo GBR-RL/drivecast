@@ -37,8 +37,11 @@ def bronze_files(lake: str) -> list[str]:
     return files
 
 
-def register_bronze(con: Any, lake: str) -> list[str]:
+def register_bronze(con: Any, lake: str, months: list[str] | None = None) -> list[str]:
+    """Register the view "bronze", optionally over some months ("YYYY-MM") only."""
     files = bronze_files(lake)
+    if months is not None:
+        files = [f for f in files if f.rsplit("_", 1)[-1].removesuffix(".parquet") in months]
     if any(f.startswith("http") for f in files):
         con.execute("INSTALL httpfs; LOAD httpfs")
     listed = ", ".join(f"'{f}'" for f in files)

@@ -61,7 +61,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view "$RELEASE" >/dev/null 2>&1 || gh release create "$RELEASE"             --target "$GITHUB_SHA" --latest=false --title "MLOps ($RELEASE)"             --notes "Model staleness per test quarter (staleness_<quarter>.json), the models fitted for each quarter (lightgbm_<quarter>.txt, logreg_<quarter>.joblib) and the MLflow store with the model registry. Built by the Staleness and MLOps workflows from the gold release $GOLD."
+          gh release view "$RELEASE" >/dev/null 2>&1 || gh release create "$RELEASE" \
+            --target "$GITHUB_SHA" --latest=false --title "MLOps ($RELEASE)" \
+            --notes "Model staleness per test quarter (staleness_<quarter>.json), the models fitted for each quarter (lightgbm_<quarter>.txt, logreg_<quarter>.joblib) and the MLflow store with the model registry. Built by the Staleness and MLOps workflows from the gold release $GOLD."
 
   staleness:
     needs: plan

@@ -125,7 +125,7 @@ def run_quarter(
     return result
 
 
-def backtest_quarters(first: str = "2015Q2", last: str = "2026Q2") -> list[str]:
+def backtest_quarters(first: str = "2015Q2", last: str | None = None) -> list[str]:
     """Test quarters: each needs four earlier quarters of training data (data starts 2013Q2)."""
     from drivecast.lake.silver import quarters
 

@@ -143,7 +143,11 @@ def build_quarter(con: Any, quarter: str, drives: str, out: Path) -> dict[str, A
     }
 
 
-def quarters(first: str = "2013Q2", last: str = "2026Q2") -> list[str]:
+def quarters(first: str = "2013Q2", last: str | None = None) -> list[str]:
+    """Quarters from ``first`` to ``last`` (default: the newest published one)."""
+    from drivecast.lake.sources import latest_name
+
+    last = last or latest_name()
     year, q = int(first[:4]), int(first[-1])
     result = []
     while (year, q) <= (int(last[:4]), int(last[-1])):

@@ -27,6 +27,7 @@ models = ["lightgbm>=4.3", "scikit-learn>=1.5"]
 # torch comes from the CPU wheel index: pip install torch --index-url https://download.pytorch.org/whl/cpu
 sequence = ["torch>=2.3"]
 mlops = ["mlflow>=2.14", "joblib>=1.3"]
+serve = ["fastapi>=0.110", "uvicorn>=0.29", "lightgbm>=4.3", "scikit-learn>=1.5", "joblib>=1.3"]
 
 [project.scripts]
 drivecast = "drivecast.cli:app"

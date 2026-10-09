@@ -1,0 +1,10 @@
+{
+  "registered_model": "drivecast-failure-30d",
+  "runs": 135,
+  "versions": 90,
+  "champion": {
+    "version": "90",
+    "family": "lightgbm",
+    "quarter": "2026Q2"
+  }
+}

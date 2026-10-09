@@ -39,7 +39,8 @@ def feature_names() -> list[str]:
     return names
 
 
-def _window_sql(start: str, end: str, lake_end: str) -> str:
+def window_sql(start: str, end: str, lake_end: str) -> str:
+    """Feature rows for the days in [start, end) from the views "silver" and "drives"."""
     w7 = (
         "(PARTITION BY serial_number ORDER BY date "
         "RANGE BETWEEN INTERVAL 7 DAYS PRECEDING AND CURRENT ROW)"
@@ -112,7 +113,7 @@ def build_quarter(
     out.parent.mkdir(parents=True, exist_ok=True)
     begin = time.monotonic()
     con.execute(
-        f"COPY ({_window_sql(start, end, lake_end)} ORDER BY date, serial_number) "
+        f"COPY ({window_sql(start, end, lake_end)} ORDER BY date, serial_number) "
         f"TO '{out.as_posix()}' (FORMAT parquet, COMPRESSION zstd, ROW_GROUP_SIZE 500000)"
     )
     seconds = time.monotonic() - begin

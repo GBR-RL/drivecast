@@ -109,3 +109,35 @@ def test_api_scores_drives_and_validates_input(
         bad = {"drives": [payload["drives"][0] | {"readings": [{"date": "2020-03-01", "x": 1}]}]}
         assert client.post("/score", json=bad).status_code == 422
         assert client.post("/score/features", json={"rows": [{"smart_5": 1.0}]}).status_code == 422
+
+
+def test_watchlist_ranks_every_drive_on_the_last_day(tmp_path: Path, model_dir: Path) -> None:
+    from drivecast.serve import watchlist
+
+    rows = []
+    for d in DRIVES:
+        maker = "Seagate" if d["model"].startswith("ST") else "HGST"
+        for r in d["readings"]:
+            rows.append({"serial_number": d["serial_number"], "model": d["model"],
+                         "manufacturer": maker, "capacity_bytes": d["capacity_bytes"],
+                         "failure": 0, "datacenter": None, **r})  # fmt: skip
+    silver = pd.DataFrame(rows)
+    columns = [f"smart_{i}_raw" for i in SMART_RAW]
+    columns += [f"smart_{i}_normalized" for i in SMART_NORMALIZED]
+    for c in columns:
+        if c not in silver:
+            silver[c] = pd.Series([None] * len(silver), dtype="Int64")
+    silver.to_parquet(tmp_path / "silver.parquet")
+    pd.DataFrame({"serial_number": ["A", "B"], "first_date": [date(2020, 3, 1)] * 2,
+                  "last_date": [date(2020, 4, 14)] * 2,
+                  "failure_date": pd.Series([None, None], dtype="object")}).to_parquet(
+        tmp_path / "drives.parquet")  # fmt: skip
+    out = tmp_path / "watch"
+    summary = watchlist.build(duckdb.connect(), [(tmp_path / "silver.parquet").as_posix()],
+                              (tmp_path / "drives.parquet").as_posix(), model_dir, out)  # fmt: skip
+    assert summary["date"] == "2020-04-14"
+    assert summary["drives"] == 2
+    assert [r["rank"] for r in summary["top"]] == [1, 2]
+    assert summary["top"][0]["score"] >= summary["top"][1]["score"]
+    assert (out / "index.html").read_text(encoding="utf-8").startswith("<!doctype html>")
+    assert (out / "watchlist.csv").exists()

@@ -1,0 +1,485 @@
+{
+  "drives": 512600,
+  "checks": {
+    "rows": {
+      "unit": "rows",
+      "description": "Rows in the bronze lake",
+      "total": 744525690,
+      "by_year": {
+        "2013": 5091501,
+        "2014": 12582414,
+        "2015": 17509251,
+        "2016": 24471617,
+        "2017": 30471787,
+        "2018": 36700506,
+        "2019": 40737546,
+        "2020": 52286398,
+        "2021": 67294340,
+        "2022": 80357762,
+        "2023": 91683133,
+        "2024": 105379761,
+        "2025": 117394187,
+        "2026": 62565487
+      }
+    },
+    "drives": {
+      "unit": "drives",
+      "description": "Distinct serial numbers reporting in the year",
+      "total": 2575351,
+      "by_year": {
+        "2013": 29072,
+        "2014": 47793,
+        "2015": 62898,
+        "2016": 81173,
+        "2017": 108282,
+        "2018": 124326,
+        "2019": 136568,
+        "2020": 181161,
+        "2021": 230832,
+        "2022": 239010,
+        "2023": 290299,
+        "2024": 330927,
+        "2025": 349462,
+        "2026": 363548
+      }
+    },
+    "failures": {
+      "unit": "rows",
+      "description": "Rows with failure = 1",
+      "total": 33623,
+      "by_year": {
+        "2013": 724,
+        "2014": 2205,
+        "2015": 1417,
+        "2016": 1428,
+        "2017": 1547,
+        "2018": 1365,
+        "2019": 2226,
+        "2020": 1495,
+        "2021": 2158,
+        "2022": 3158,
+        "2023": 4357,
+        "2024": 4664,
+        "2025": 4327,
+        "2026": 2552
+      }
+    },
+    "missing_key": {
+      "unit": "rows",
+      "description": "Rows without a date, serial number or model",
+      "total": 7,
+      "by_year": {
+        "2017": 7
+      }
+    },
+    "duplicate_rows": {
+      "unit": "rows",
+      "description": "Extra rows for a (serial number, date) already present",
+      "total": 235623,
+      "by_year": {
+        "2022": 235623
+      }
+    },
+    "failure_not_binary": {
+      "unit": "rows",
+      "description": "Rows whose failure flag is not 0 or 1",
+      "total": 0,
+      "by_year": {}
+    },
+    "several_failures": {
+      "unit": "drives",
+      "description": "Drives with more than one failure row",
+      "total": 57,
+      "by_year": {
+        "2015": 4,
+        "2016": 1,
+        "2017": 2,
+        "2018": 7,
+        "2021": 9,
+        "2022": 1,
+        "2023": 7,
+        "2024": 8,
+        "2025": 18
+      }
+    },
+    "reported_after_failure": {
+      "unit": "drives",
+      "description": "Drives that report after their first failure",
+      "total": 1212,
+      "by_year": {
+        "2013": 9,
+        "2014": 393,
+        "2015": 88,
+        "2016": 40,
+        "2017": 38,
+        "2018": 61,
+        "2019": 11,
+        "2020": 12,
+        "2021": 73,
+        "2022": 79,
+        "2023": 143,
+        "2024": 228,
+        "2025": 37
+      }
+    },
+    "rows_after_failure": {
+      "unit": "rows",
+      "description": "Rows reported after the drive's first failure",
+      "total": 496708,
+      "by_year": {
+        "2013": 180,
+        "2014": 5605,
+        "2015": 8139,
+        "2016": 30473,
+        "2017": 38905,
+        "2018": 42205,
+        "2019": 43659,
+        "2020": 47465,
+        "2021": 44939,
+        "2022": 51588,
+        "2023": 53227,
+        "2024": 39012,
+        "2025": 56923,
+        "2026": 34388
+      }
+    },
+    "capacity_negative": {
+      "unit": "rows",
+      "description": "Rows with capacity_bytes below zero (-1 means unknown)",
+      "total": 137180,
+      "by_year": {
+        "2015": 3,
+        "2016": 22,
+        "2017": 2717,
+        "2018": 830,
+        "2019": 4893,
+        "2020": 18591,
+        "2021": 35587,
+        "2022": 18337,
+        "2023": 24152,
+        "2024": 32048
+      }
+    },
+    "capacity_changes": {
+      "unit": "drives",
+      "description": "Drives reporting more than one positive capacity",
+      "total": 100261,
+      "by_year": {
+        "2013": 5106,
+        "2014": 12625,
+        "2015": 18388,
+        "2016": 21776,
+        "2017": 32720,
+        "2018": 9646
+      }
+    },
+    "model_changes": {
+      "unit": "drives",
+      "description": "Drives reporting more than one model name",
+      "total": 13079,
+      "by_year": {
+        "2014": 7,
+        "2016": 2,
+        "2020": 5999,
+        "2021": 4243,
+        "2022": 2828
+      }
+    },
+    "power_on_hours_decrease": {
+      "unit": "drives",
+      "description": "Drives whose power-on hours (SMART 9) go down between reports",
+      "total": 105725,
+      "by_year": {
+        "2013": 269,
+        "2014": 1741,
+        "2015": 13956,
+        "2016": 20457,
+        "2017": 30336,
+        "2018": 27303,
+        "2019": 11564,
+        "2020": 33,
+        "2021": 17,
+        "2022": 6,
+        "2023": 29,
+        "2024": 6,
+        "2025": 8
+      }
+    },
+    "not_data_drive": {
+      "unit": "rows",
+      "description": "Rows from SSDs and boot drives",
+      "total": 12152530,
+      "by_year": {
+        "2014": 247252,
+        "2015": 380652,
+        "2016": 526873,
+        "2017": 622247,
+        "2018": 694882,
+        "2019": 741605,
+        "2020": 940114,
+        "2021": 1221947,
+        "2022": 1466724,
+        "2023": 1604950,
+        "2024": 1539698,
+        "2025": 1457038,
+        "2026": 708548
+      }
+    },
+    "normalized_out_of_range": {
+      "unit": "values",
+      "description": "SMART normalized values outside 0-255",
+      "total": 0,
+      "by_year": {}
+    },
+    "raw_negative": {
+      "unit": "values",
+      "description": "SMART raw values below zero",
+      "total": 0,
+      "by_year": {}
+    },
+    "partial_days": {
+      "unit": "days",
+      "description": "Days on which fewer than 80% of the drives alive that day (seen before and after) report",
+      "total": 73,
+      "by_year": {
+        "2013": 56,
+        "2014": 3,
+        "2015": 1,
+        "2017": 4,
+        "2018": 1,
+        "2019": 1,
+        "2022": 1,
+        "2023": 5,
+        "2025": 1
+      }
+    },
+    "missing_days": {
+      "unit": "days",
+      "description": "Calendar days without any report between the first and last",
+      "total": 4,
+      "by_year": {
+        "2014": 1,
+        "2015": 1,
+        "2017": 1,
+        "2022": 1
+      }
+    }
+  },
+  "partial_days": [
+    {
+      "from": "2013-08-20",
+      "to": "2013-10-14",
+      "days": 56,
+      "min_reports": 315,
+      "alive": 24302
+    },
+    {
+      "from": "2014-06-20",
+      "to": "2014-06-22",
+      "days": 3,
+      "min_reports": 23540,
+      "alive": 35983
+    },
+    {
+      "from": "2015-10-28",
+      "to": "2015-10-28",
+      "days": 1,
+      "min_reports": 23644,
+      "alive": 53175
+    },
+    {
+      "from": "2017-01-28",
+      "to": "2017-01-29",
+      "days": 2,
+      "min_reports": 46,
+      "alive": 74729
+    },
+    {
+      "from": "2017-01-31",
+      "to": "2017-01-31",
+      "days": 1,
+      "min_reports": 61,
+      "alive": 74729
+    },
+    {
+      "from": "2017-11-14",
+      "to": "2017-11-14",
+      "days": 1,
+      "min_reports": 33644,
+      "alive": 94615
+    },
+    {
+      "from": "2018-10-24",
+      "to": "2018-10-24",
+      "days": 1,
+      "min_reports": 28878,
+      "alive": 102897
+    },
+    {
+      "from": "2019-11-05",
+      "to": "2019-11-05",
+      "days": 1,
+      "min_reports": 55980,
+      "alive": 120567
+    },
+    {
+      "from": "2022-06-06",
+      "to": "2022-06-06",
+      "days": 1,
+      "min_reports": 68287,
+      "alive": 217035
+    },
+    {
+      "from": "2023-03-19",
+      "to": "2023-03-19",
+      "days": 1,
+      "min_reports": 151793,
+      "alive": 241915
+    },
+    {
+      "from": "2023-04-13",
+      "to": "2023-04-13",
+      "days": 1,
+      "min_reports": 72268,
+      "alive": 240909
+    },
+    {
+      "from": "2023-04-16",
+      "to": "2023-04-16",
+      "days": 1,
+      "min_reports": 72261,
+      "alive": 242136
+    },
+    {
+      "from": "2023-07-05",
+      "to": "2023-07-05",
+      "days": 1,
+      "min_reports": 153328,
+      "alive": 245828
+    },
+    {
+      "from": "2023-12-18",
+      "to": "2023-12-18",
+      "days": 1,
+      "min_reports": 207751,
+      "alive": 270194
+    },
+    {
+      "from": "2025-05-12",
+      "to": "2025-05-12",
+      "days": 1,
+      "min_reports": 245997,
+      "alive": 316851
+    }
+  ],
+  "reconciliation": [
+    {
+      "quarter": "2022Q3",
+      "source": "https://www.backblaze.com/blog/backblaze-drive-stats-for-q3-2022/",
+      "rule": {
+        "min_drives": 59,
+        "min_drive_days": 0
+      },
+      "published": {
+        "drives": 230897,
+        "boot_drives": 4200,
+        "analyzed": 226309,
+        "drive_days": null,
+        "failures": null,
+        "afr": 1.64
+      },
+      "lake": {
+        "last_day": "2022-09-30",
+        "drives": 230897,
+        "boot_drives": 4198,
+        "analyzed": 226369,
+        "drive_days": 20171288,
+        "failures": 912,
+        "models": 30,
+        "afr": 1.65
+      },
+      "note": null
+    },
+    {
+      "quarter": "2025Q2",
+      "source": "https://www.backblaze.com/blog/backblaze-drive-stats-for-q2-2025/",
+      "rule": {
+        "min_drives": 100,
+        "min_drive_days": 10000
+      },
+      "published": {
+        "drives": 321201,
+        "boot_drives": 3971,
+        "analyzed": null,
+        "drive_days": null,
+        "failures": null,
+        "afr": 1.36
+      },
+      "lake": {
+        "last_day": "2025-06-30",
+        "drives": 321201,
+        "boot_drives": 3979,
+        "analyzed": 316732,
+        "drive_days": 28402627,
+        "failures": 1061,
+        "models": 31,
+        "afr": 1.36
+      },
+      "note": null
+    },
+    {
+      "quarter": "2026Q1",
+      "source": "https://www.backblaze.com/blog/backblaze-drive-stats-for-q1-2026/",
+      "rule": {
+        "min_drives": 100,
+        "min_drive_days": 10000
+      },
+      "published": {
+        "drives": 345662,
+        "boot_drives": 3907,
+        "analyzed": 341263,
+        "drive_days": 30203180,
+        "failures": 1030,
+        "afr": 1.24
+      },
+      "lake": {
+        "last_day": "2026-03-31",
+        "drives": 345662,
+        "boot_drives": 3915,
+        "analyzed": 341279,
+        "drive_days": 30187322,
+        "failures": 1030,
+        "models": 33,
+        "afr": 1.25
+      },
+      "note": null
+    },
+    {
+      "quarter": "2026Q2",
+      "source": "https://www.backblaze.com/blog/backblaze-drive-stats-for-q2-2026/",
+      "rule": {
+        "min_drives": 100,
+        "min_drive_days": 10000
+      },
+      "published": {
+        "drives": 359101,
+        "boot_drives": 3881,
+        "analyzed": 354415,
+        "drive_days": 31553350,
+        "failures": 1498,
+        "afr": 1.73
+      },
+      "lake": {
+        "last_day": "2026-06-30",
+        "drives": 355238,
+        "boot_drives": 3890,
+        "analyzed": 350652,
+        "drive_days": 31553350,
+        "failures": 1516,
+        "models": 32,
+        "afr": 1.75
+      },
+      "note": "The published fleet count is about 3,900 drives above what the daily files show on any day of the last week of June (354,846 to 355,238 reports a day), while the drive days, which come from the daily files, match exactly."
+    }
+  ]
+}

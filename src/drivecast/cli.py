@@ -153,6 +153,30 @@ def silver(
 
 
 @app.command()
+def survival(
+    drives_path: Annotated[str, typer.Option("--drives", help="Drive table (path or URL).")] = str(
+        LAKE / "silver" / "drives.parquet"
+    ),
+    out: Path = Path("docs/results/survival.json"),
+) -> None:
+    """AFR with exact intervals, hazard by age, Kaplan-Meier and Cox models of drive lifetime."""
+    import pandas as pd
+
+    from drivecast.analysis.survival import analyse
+
+    result = analyse(pd.read_parquet(drives_path))
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(result, indent=2, default=_plain) + "\n")
+    typer.echo(f"{result['drives']:,} drives, {result['failures']:,} failures -> {out}")
+
+
+def _plain(value: object) -> object:
+    """JSON for numpy scalars and dates."""
+    item = getattr(value, "item", None)
+    return item() if callable(item) else str(value)
+
+
+@app.command()
 def version() -> None:
     """Print the package version."""
     typer.echo(__version__)

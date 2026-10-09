@@ -12,6 +12,7 @@ a sequence of model ages, and the performance of each age in each quarter is in 
 
 from __future__ import annotations
 
+import gc
 import time
 from pathlib import Path
 from typing import Any
@@ -58,7 +59,7 @@ def _train_rows(con: Any, gold: str, deployed: str) -> pd.DataFrame:
     """The rows a model deployed at ``deployed`` is fitted on (with the embargo)."""
     start, _ = quarter_bounds(deployed)
     files = ", ".join(f"'{gold}/train_{q}.parquet'" for q in train_quarters(deployed))
-    cols = ", ".join(f"CAST({c} AS DOUBLE) AS {c}" for c in feature_names())
+    cols = ", ".join(f"CAST({c} AS FLOAT) AS {c}" for c in feature_names())
     frame: pd.DataFrame = con.execute(
         f"SELECT model, {cols}, label, weight FROM read_parquet([{files}]) "
         f"WHERE label_complete AND date < DATE '{start}' - INTERVAL {HORIZON_DAYS} DAYS"
@@ -68,7 +69,7 @@ def _train_rows(con: Any, gold: str, deployed: str) -> pd.DataFrame:
 
 def _sample(con: Any, gold: str, quarter: str) -> pd.DataFrame:
     """A quarter's training sample, as a picture of its data (labels are not used)."""
-    cols = ", ".join(f"CAST({c} AS DOUBLE) AS {c}" for c in feature_names())
+    cols = ", ".join(f"CAST({c} AS FLOAT) AS {c}" for c in feature_names())
     frame: pd.DataFrame = con.execute(
         f"SELECT model, {cols}, weight FROM read_parquet('{gold}/train_{quarter}.parquet')"
     ).df()
@@ -123,6 +124,7 @@ def run_quarter(
         if models_out is not None and name in ("lightgbm_age0", "logreg_age0"):
             save(model, models_out / f"{family}_{test}")
         del rows
+        gc.collect()
     scored = score_test(con, f"{gold}/features_{test}.parquet", test, fitted, None)
     a = scored["arrays"]
     rows_ = evaluate.TestRows(a["drive"], a["day"], a["label"], a["dtf"], a["fiq"])

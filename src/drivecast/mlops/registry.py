@@ -22,6 +22,9 @@ from typing import Any
 from drivecast.models.estimators import LightGBM
 
 REGISTERED = "drivecast-failure-30d"
+# Types in the logistic-regression pipeline that MLflow's skops format does not trust by
+# default: the signed-log transform and numpy dtypes.
+TRUSTED = ["drivecast.models.estimators._signed_log", "numpy.dtype"]
 EXPERIMENT = "drivecast-backtest"
 
 
@@ -101,7 +104,9 @@ def build(
                             lgb.Booster(model_file=str(model_path)), name="model"
                         )
                     else:
-                        info = mlflow.sklearn.log_model(joblib.load(model_path), name="model")
+                        info = mlflow.sklearn.log_model(
+                            joblib.load(model_path), name="model", skops_trusted_types=TRUSTED
+                        )
                     number = str(mlflow.register_model(info.model_uri, REGISTERED).version)
                     tags = {"quarter": quarter, "family": family, "run": run.info.run_id}
                     for key, value in tags.items():

@@ -12,6 +12,7 @@ score.
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from typing import Any
 
@@ -109,10 +110,12 @@ def build_quarter(
         (last,) = con.execute("SELECT max(last_date) FROM drives").fetchone()
         lake_end = str(last)
     out.parent.mkdir(parents=True, exist_ok=True)
+    begin = time.monotonic()
     con.execute(
         f"COPY ({_window_sql(start, end, lake_end)} ORDER BY date, serial_number) "
         f"TO '{out.as_posix()}' (FORMAT parquet, COMPRESSION zstd, ROW_GROUP_SIZE 500000)"
     )
+    seconds = time.monotonic() - begin
     rows, positives, complete, drives_n = con.execute(
         f"SELECT count(*), sum(label::INT), sum(label_complete::INT), "
         f"count(DISTINCT serial_number) FROM read_parquet('{out.as_posix()}')"
@@ -126,6 +129,7 @@ def build_quarter(
         "positive_rows": int(positives or 0),
         "label_complete_rows": int(complete or 0),
         "bytes": out.stat().st_size,
+        "seconds": round(seconds, 1),
     }
 
 

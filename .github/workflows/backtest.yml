@@ -16,6 +16,24 @@ on:
       release:
         description: Release that holds the backtest results
         default: backtest-v1
+  workflow_call:
+    inputs:
+      quarters:
+        description: Comma-separated test quarters, or all
+        type: string
+        default: "all"
+      gold:
+        description: Release that holds the gold layer
+        type: string
+        default: "gold-v1"
+      release:
+        description: Release that holds the backtest results
+        type: string
+        default: "backtest-v1"
+      latest:
+        description: Newest published quarter, when newer than the code knows (e.g. 2026Q3)
+        type: string
+        default: ""
   pull_request:
     paths:
       - "src/drivecast/models/**"
@@ -25,6 +43,7 @@ permissions:
   contents: write
 
 env:
+  DRIVECAST_LATEST: ${{ inputs.latest }}
   GOLD: ${{ inputs.gold || 'gold-v1' }}
   RELEASE: ${{ inputs.release || 'backtest-v1' }}
 
@@ -55,7 +74,7 @@ jobs:
           print("quarters=" + json.dumps(chosen))
           PY
       - name: Create the release that holds the results
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -95,7 +114,7 @@ jobs:
       - name: Fit and evaluate
         run: drivecast backtest "${{ matrix.quarter }}" --gold gold --out out --threads 4
       - name: Store the results
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

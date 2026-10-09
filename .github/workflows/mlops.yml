@@ -14,8 +14,26 @@ on:
         description: Release that holds the staleness results and the models
         default: mlops-v1
 
+  workflow_call:
+    inputs:
+      backtest:
+        description: Release that holds the backtest results and scores
+        type: string
+        default: "backtest-v1"
+      release:
+        description: Release that holds the staleness results and the models
+        type: string
+        default: "mlops-v1"
+      latest:
+        description: Newest published quarter, when newer than the code knows (e.g. 2026Q3)
+        type: string
+        default: ""
+
 permissions:
   contents: write
+
+env:
+  DRIVECAST_LATEST: ${{ inputs.latest }}
 
 jobs:
   gate:

@@ -1,0 +1,101 @@
+name: Engines
+
+# The feature job on DuckDB and on Apache Spark (local mode), on the same runner and the same
+# local copies of the silver files: both outputs are compared value by value and both are timed.
+# On pull requests that touch either implementation, 2013Q4 is compared.
+on:
+  workflow_dispatch:
+    inputs:
+      quarters:
+        description: Comma-separated quarters to compare
+        default: 2016Q2,2019Q2,2022Q2,2025Q4
+      silver:
+        description: Release that holds the silver layer
+        default: silver-v1
+  pull_request:
+    paths:
+      - "src/drivecast/features/**"
+      - "tests/test_spark.py"
+      - ".github/workflows/engines.yml"
+
+permissions:
+  contents: read
+
+env:
+  SILVER: ${{ inputs.silver || 'silver-v1' }}
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    outputs:
+      quarters: ${{ steps.plan.outputs.quarters }}
+    steps:
+      - id: plan
+        env:
+          WANTED: ${{ github.event_name == 'pull_request' && '2013Q4' || inputs.quarters }}
+        run: python3 -c "import json, os; print('quarters=' + json.dumps([q.strip() for q in os.environ['WANTED'].split(',')]))" >> "$GITHUB_OUTPUT"
+
+  compare:
+    needs: plan
+    name: DuckDB vs Spark ${{ matrix.quarter }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        quarter: ${{ fromJSON(needs.plan.outputs.quarters) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install --quiet -e ".[dev,spark]"
+      - name: Both engines agree on a small case
+        run: pytest tests/test_spark.py
+      - name: Download the silver files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          Q: ${{ matrix.quarter }}
+        run: |
+          PREV=$(python -c "from drivecast.features.build import previous_quarter; print(previous_quarter('$Q'))")
+          gh release download "$SILVER" --dir silver --pattern drives.parquet \
+            --pattern "silver_$Q.parquet" --pattern "silver_$PREV.parquet" || true
+          ls -la silver
+      - name: DuckDB
+        run: |
+          drivecast features "${{ matrix.quarter }}" --silver silver --drives silver/drives.parquet \
+            --out duckdb --threads 4 --memory-limit 12GB
+      - name: Spark
+        run: |
+          drivecast features-spark "${{ matrix.quarter }}" --silver silver \
+            --drives silver/drives.parquet --out spark --threads 4 --memory 12g
+      - name: Compare
+        run: |
+          Q="${{ matrix.quarter }}"
+          drivecast features-compare "duckdb/features_$Q.parquet" "spark/features_$Q/*.parquet" \
+            --out "compare_$Q.json"
+          python - <<'PY'
+          import json, os
+          q = os.environ.get("Q") or "${{ matrix.quarter }}"
+          duck = json.load(open(f"duckdb/features_{q}.json"))
+          spark = json.load(open(f"spark/features_{q}.json"))
+          comp = json.load(open(f"compare_{q}.json"))
+          summary = {"quarter": q, "rows": duck["rows"], "duckdb_seconds": duck["seconds"],
+                     "spark_seconds": spark["seconds"], **comp}
+          json.dump(summary, open(f"engines_{q}.json", "w"), indent=2)
+          print(json.dumps(summary, indent=2))
+          assert comp["only_left"] == comp["only_right"] == 0, "the engines produced different rows"
+          assert not comp["differing_values"], "the engines produced different values"
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: engines-${{ matrix.quarter }}
+          path: engines_*.json
+          retention-days: 90

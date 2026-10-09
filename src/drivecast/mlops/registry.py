@@ -6,8 +6,10 @@ model format and registered as versions of one registered model. The alias ``cha
 the gate's decisions quarter by quarter, so at the end it points to the model the gate would
 deploy now, and the version tags record when each version was champion.
 
-The store is a SQLite file plus an artifact directory: published with the results, it opens
-with ``mlflow ui --backend-store-uri sqlite:///mlflow.db``.
+The store is a SQLite file plus an artifact directory. In CI it is written through a local
+tracking server, so it opens anywhere with
+``mlflow server --backend-store-uri sqlite:///mlflow/mlflow.db --artifacts-destination
+mlflow/artifacts``.
 """
 
 from __future__ import annotations
@@ -34,24 +36,42 @@ def _metrics(m: dict[str, Any]) -> dict[str, float]:
     }
 
 
+def _connect(store: Path, tracking_uri: str | None) -> None:
+    import mlflow
+
+    if tracking_uri:
+        # A tracking server that proxies artifacts stores them as mlflow-artifacts:/ URIs,
+        # relative to its artifact root, so the published store opens anywhere.
+        mlflow.set_tracking_uri(tracking_uri)
+        location = None
+    else:
+        mlflow.set_tracking_uri(f"sqlite:///{(store / 'mlflow.db').as_posix()}")
+        location = (store / "artifacts").as_uri()
+    if mlflow.get_experiment_by_name(EXPERIMENT) is None:
+        mlflow.create_experiment(EXPERIMENT, artifact_location=location)
+    mlflow.set_experiment(EXPERIMENT)
+
+
 def build(
     store: Path,
     backtests: dict[str, dict[str, Any]],
     models_dir: Path,
     gate: dict[str, Any],
+    tracking_uri: str | None = None,
 ) -> dict[str, Any]:
-    """Log every quarter in order, register its models and move the champion alias."""
+    """Log every quarter in order, register its models and move the champion alias.
+
+    Without ``tracking_uri`` the store is a SQLite file and an artifact folder under ``store``.
+    """
     os.environ.setdefault("MLFLOW_DISABLE_AGENT_HINT", "1")
     import joblib
     import lightgbm as lgb
     import mlflow
     from mlflow import MlflowClient
 
+    store = store.resolve()
     store.mkdir(parents=True, exist_ok=True)
-    mlflow.set_tracking_uri(f"sqlite:///{(store / 'mlflow.db').as_posix()}")
-    if mlflow.get_experiment_by_name(EXPERIMENT) is None:
-        mlflow.create_experiment(EXPERIMENT, artifact_location=(store / "artifacts").as_uri())
-    mlflow.set_experiment(EXPERIMENT)
+    _connect(store, tracking_uri)
     client = MlflowClient()
     champions = {d["quarter"]: d["champion"] for d in gate["decisions"]}
     versions: dict[tuple[str, str], str] = {}

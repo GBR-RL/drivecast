@@ -463,6 +463,7 @@ def registry(
     models_dir: Annotated[Path, typer.Option("--models", help="Fitted models per quarter.")],
     gate_path: Annotated[Path, typer.Option("--gate")] = Path("docs/results/gate.json"),
     store: Path = Path("mlflow"),
+    tracking_uri: Annotated[str | None, typer.Option(help="Log through this server.")] = None,
 ) -> None:
     """Build the MLflow store: every backtest run, the models, and the champion alias."""
     from drivecast.mlops.registry import build
@@ -471,7 +472,8 @@ def registry(
         p.stem.removeprefix("backtest_"): json.loads(p.read_text())
         for p in sorted(backtest_dir.glob("backtest_*.json"))
     }
-    summary = build(store, backtests, models_dir, json.loads(gate_path.read_text()))
+    gate_result = json.loads(gate_path.read_text())
+    summary = build(store, backtests, models_dir, gate_result, tracking_uri=tracking_uri)
     typer.echo(json.dumps(summary, indent=2))
 
 

@@ -20,11 +20,13 @@ def main() -> None:
 
 
 @app.command()
-def sources() -> None:
+def sources(
+    new: Annotated[bool, typer.Option("--new", help="Only quarters published since.")] = False,
+) -> None:
     """Print the names of the published files as JSON (the ingest matrix)."""
-    from drivecast.lake.sources import all_sources
+    from drivecast.lake.sources import all_sources, probe
 
-    typer.echo(json.dumps([s.name for s in all_sources()]))
+    typer.echo(json.dumps(probe() if new else [s.name for s in all_sources()]))
 
 
 @app.command()
@@ -489,6 +491,33 @@ def serve(host: str = "127.0.0.1", port: int = 8000) -> None:
     import uvicorn
 
     uvicorn.run("drivecast.serve.app:app", host=host, port=port)
+
+
+@app.command()
+def watchlist(
+    silver: Annotated[str, typer.Option(help="Directory of the silver quarters.")] = str(
+        LAKE / "silver"
+    ),
+    drives_path: Annotated[str, typer.Option("--drives")] = str(LAKE / "silver" / "drives.parquet"),
+    model_dir: Annotated[Path, typer.Option("--model")] = Path("model"),
+    out: Path = Path("watchlist"),
+    top: int = 100,
+) -> None:
+    """Score every drive on the latest day in the lake and write the riskiest ones."""
+    import duckdb
+
+    from drivecast.features.build import previous_quarter
+    from drivecast.lake.sources import latest_name
+    from drivecast.serve.watchlist import build
+
+    newest = latest_name()
+    files = [f"{silver}/silver_{q}.parquet" for q in (previous_quarter(newest), newest)]
+    files = [f for f in files if Path(f).exists()]
+    summary = build(duckdb.connect(), files, drives_path, model_dir, out, top=top)
+    typer.echo(
+        f"{summary['date']}: {summary['drives']:,} drives scored, "
+        f"{summary['with_warnings']:,} with a warning -> {out}"
+    )
 
 
 @app.command()

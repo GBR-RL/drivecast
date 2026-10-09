@@ -26,6 +26,7 @@ from drivecast.lake.schema import COLUMNS, canonical, cast
 from drivecast.lake.sources import Source
 
 DAY_FILE = re.compile(r"(\d{4})-(\d{2})-(\d{2})\.csv$")
+FILE_DATE = r"CAST(regexp_extract(filename, '(\d{4}-\d{2}-\d{2})\.csv$', 1) AS DATE)"
 CHUNK = 1 << 20
 
 
@@ -41,6 +42,10 @@ class MonthStats:
     sha256: str
     cast_failures: dict[str, int] = field(default_factory=dict)
     unknown_columns: list[str] = field(default_factory=list)
+    # Rows whose date column is not the date in the file's name, and rows with numbers in
+    # scientific notation: both signs that a file was saved through a spreadsheet.
+    date_disagrees: int = 0
+    spreadsheet_rows: int = 0
     seconds: float = 0.0
 
 
@@ -116,9 +121,9 @@ def convert_month(
     files = ", ".join(f"'{p.as_posix()}'" for p in csv_files)
     con.execute(
         f"CREATE VIEW raw AS SELECT * FROM read_csv([{files}], header = true, "
-        "all_varchar = true, union_by_name = true)"
+        "all_varchar = true, union_by_name = true, filename = true)"
     )
-    present = [row[0] for row in con.execute("DESCRIBE raw").fetchall()]
+    present = [row[0] for row in con.execute("DESCRIBE raw").fetchall() if row[0] != "filename"]
     sources: dict[str, list[str]] = defaultdict(list)
     unknown = []
     for name in present:
@@ -129,6 +134,8 @@ def convert_month(
             sources[column].append(name)
 
     def expression(column: str, sql_type: str) -> str:
+        if column == "date":  # one file per day, named by its date
+            return f'{FILE_DATE} AS "date"'
         names = sources.get(column)
         if not names:
             return f'CAST(NULL AS {sql_type}) AS "{column}"'
@@ -148,10 +155,23 @@ def convert_month(
         for column, names in sources.items()
         for name in names
     ]
+    date_column = sources.get("date", ["date"])[0]
+    written = (
+        f'COALESCE(TRY_CAST("{date_column}" AS DATE), '
+        f"TRY_STRPTIME(\"{date_column}\", '%m/%d/%y')::DATE)"
+    )
+    sheet = " OR ".join(f"\"{n}\" ILIKE '%E+%'" for names in sources.values() for n in names)
+    checks += [
+        f"count(*) FILTER (WHERE {written} IS DISTINCT FROM {FILE_DATE})",
+        f"count(*) FILTER (WHERE {sheet})",
+    ]
     row = con.execute(f"SELECT {', '.join(checks)} FROM raw").fetchone()
     assert row is not None
+    *counts, date_disagrees, spreadsheet_rows = row
     labels = [name for names in sources.values() for name in names]
-    failures = {name: int(n) for name, n in zip(labels, row, strict=True) if n}
+    failures = {
+        name: int(n) for name, n in zip(labels, counts, strict=True) if n and name != date_column
+    }
     rows, days, drives, failed = con.execute(
         f"SELECT count(*), count(DISTINCT date), count(DISTINCT serial_number), "
         f"coalesce(sum(failure), 0) FROM read_parquet('{out.as_posix()}')"
@@ -168,6 +188,8 @@ def convert_month(
         sha256=sha256(out),
         cast_failures=failures,
         unknown_columns=sorted(unknown),
+        date_disagrees=int(date_disagrees),
+        spreadsheet_rows=int(spreadsheet_rows),
         seconds=round(time.monotonic() - start, 1),
     )
 

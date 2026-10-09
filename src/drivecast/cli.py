@@ -219,6 +219,50 @@ def features(
     )
 
 
+@app.command("features-spark")
+def features_spark(
+    quarter: str,
+    silver_dir: Annotated[str, typer.Option("--silver")] = str(LAKE / "silver"),
+    drives_path: Annotated[str, typer.Option("--drives")] = str(LAKE / "silver" / "drives.parquet"),
+    out_dir: Annotated[Path, typer.Option("--out")] = LAKE / "gold_spark",
+    threads: int = 4,
+    memory: str = "10g",
+) -> None:
+    """The same feature job on Apache Spark (local mode), for the engine comparison."""
+    from drivecast.features import spark
+    from drivecast.features.build import previous_quarter
+
+    files = [
+        f"{silver_dir}/silver_{q}.parquet"
+        for q in (previous_quarter(quarter), quarter)
+        if Path(f"{silver_dir}/silver_{q}.parquet").exists()
+    ]
+    session = spark.session(threads=threads, memory=memory)
+    stats = spark.build_quarter(
+        session, quarter, files, drives_path, out_dir / f"features_{quarter}"
+    )
+    session.stop()
+    (out_dir / f"features_{quarter}.json").write_text(json.dumps(stats, indent=2) + "\n")
+    typer.echo(f"{quarter} on Spark: {stats['rows']:,} rows in {stats['seconds']} s")
+
+
+@app.command("features-compare")
+def features_compare(
+    left: str,
+    right: str,
+    out: Annotated[Path | None, typer.Option(help="Write the comparison as JSON.")] = None,
+) -> None:
+    """Compare two feature outputs value by value (paths or globs of Parquet files)."""
+    import duckdb
+
+    from drivecast.features.compare import compare
+
+    result = compare(duckdb.connect(), left, right)
+    if out:
+        out.write_text(json.dumps(result, indent=2) + "\n")
+    typer.echo(json.dumps(result, indent=2))
+
+
 @app.command()
 def version() -> None:
     """Print the package version."""

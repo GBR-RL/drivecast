@@ -264,6 +264,56 @@ def features_compare(
 
 
 @app.command()
+def backtest(
+    quarter: str,
+    gold: Annotated[str, typer.Option(help="Directory or URL prefix of the gold files.")] = str(
+        LAKE / "gold"
+    ),
+    out_dir: Annotated[Path, typer.Option("--out")] = Path("runs/backtest"),
+    scores: Annotated[bool, typer.Option(help="Also write every score as Parquet.")] = True,
+    threads: int = 4,
+) -> None:
+    """Fit on the four quarters before QUARTER and evaluate every model on QUARTER."""
+    import duckdb
+
+    from drivecast.models.backtest import run_quarter
+
+    con = duckdb.connect()
+    if gold.startswith("http"):
+        con.execute("INSTALL httpfs; LOAD httpfs")
+    result = run_quarter(
+        con,
+        quarter,
+        gold.rstrip("/"),
+        threads=threads,
+        scores_out=out_dir / f"scores_{quarter}.parquet" if scores else None,
+    )
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / f"backtest_{quarter}.json").write_text(json.dumps(result, indent=2) + "\n")
+    for name, m in result["models"].items():
+        d = m["daily"]["25"]
+        typer.echo(
+            f"{quarter} {name:9s} AP {m['average_precision']:.3f}  "
+            f"top-25/day precision {d['precision']:.2f} recall {d['recall']:.2f}"
+        )
+
+
+@app.command("backtest-summary")
+def backtest_summary(
+    paths: list[Path],
+    out: Annotated[Path, typer.Option("--out", "-o")] = Path("docs/results/backtest.json"),
+) -> None:
+    """Join the per-quarter backtest results: means, medians and paired wins per model."""
+    from drivecast.models.backtest import summarise
+
+    summary = summarise([json.loads(p.read_text()) for p in paths])
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(summary, indent=2) + "\n")
+    for name, m in summary["models"].items():
+        typer.echo(f"{name:9s} mean AP {m['mean']['average_precision']:.3f}")
+
+
+@app.command()
 def version() -> None:
     """Print the package version."""
     typer.echo(__version__)

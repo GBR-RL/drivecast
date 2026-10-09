@@ -1,0 +1,53 @@
+name: Data quality
+
+# Runs the data-quality checks and the reconciliation with Backblaze's published numbers over the
+# whole bronze lake on one runner (the lake is downloaded from its release first). On pull
+# requests that touch the checks, only the 2013 months are checked, as a smoke test.
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: Release that holds the lake
+        default: lake-v1
+  pull_request:
+    paths:
+      - "src/drivecast/quality/**"
+      - "src/drivecast/lake/views.py"
+      - ".github/workflows/quality.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    env:
+      RELEASE: ${{ inputs.release || 'lake-v1' }}
+      PATTERN: ${{ github.event_name == 'pull_request' && 'drive_stats_2013-*.parquet' || 'drive_stats_*.parquet' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install --quiet -e .
+      - name: Download the lake
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "$RELEASE" --repo "$GITHUB_REPOSITORY" --pattern "$PATTERN" --dir lake
+          du -sh lake; ls lake | wc -l; df -h /
+      - name: Checks and reconciliation
+        run: |
+          drivecast quality --lake lake --out quality.md --json quality.json \
+            --threads 4 --memory-limit 12GB
+          cat quality.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quality
+          path: |
+            quality.md
+            quality.json
+          retention-days: 90

@@ -1,6 +1,7 @@
 # The scoring service with the champion model baked in.
 # Build context: the repository, with the exported model in ./model (drivecast export-champion).
 FROM python:3.11-slim
+LABEL org.opencontainers.image.source="https://github.com/GBR-RL/drivecast"       org.opencontainers.image.description="drivecast: 30-day hard-drive failure risk from SMART data"       org.opencontainers.image.licenses="MIT"
 
 RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
     && rm -rf /var/lib/apt/lists/*

@@ -61,16 +61,20 @@ jobs:
       - uses: helm/kind-action@v1
         with:
           cluster_name: drivecast
+          config: deploy/kind.yaml
       - name: Deploy to kind
         run: |
           kind load docker-image drivecast:ci --name drivecast
           kubectl apply -f deploy/k8s/
           kubectl set image deployment/drivecast api=drivecast:ci
           kubectl rollout status deployment/drivecast --timeout=180s
-          kubectl get pods -o wide
+          # Reach the service through a node port instead of kubectl port-forward, which
+          # funnels every request through one tunnel.
+          kubectl patch service drivecast --type merge -p \
+            '{"spec":{"type":"NodePort","ports":[{"name":"http","port":80,"targetPort":"http","nodePort":30080}]}}'
+          kubectl get pods,services -o wide
       - name: Smoke and load test
         run: |
-          kubectl port-forward service/drivecast 8080:80 >/tmp/port-forward.log 2>&1 &
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:8080/health && break; sleep 2; done
           python deploy/smoke.py http://127.0.0.1:8080 --requests 300 --concurrency 8 \
             --summary "$GITHUB_STEP_SUMMARY" | tee smoke.json

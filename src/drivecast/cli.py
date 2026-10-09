@@ -112,8 +112,10 @@ def drives(
     from drivecast.lake.views import connect, register_bronze
 
     con = connect(threads=threads, memory_limit=memory_limit, temp=RAW / "duckdb_tmp")
-    register_bronze(con, lake)
-    typer.echo(f"{build_drives(con, out):,} drives -> {out}")
+    files = register_bronze(con, lake)
+    if any(f.startswith("http") for f in files):
+        con.execute("INSTALL httpfs; LOAD httpfs")
+    typer.echo(f"{build_drives(con, files, out):,} drives -> {out}")
 
 
 @app.command()

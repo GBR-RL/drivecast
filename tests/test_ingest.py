@@ -22,6 +22,8 @@ def _zip(path: Path) -> Path:
             "2016-01-31,B,M2,8000,1,ams5,0031,true,90,12.0,,\n",
         )
         z.writestr("2016/2016-02-01.csv", old + "2016-02-01,A,M1,4000,0,100,3\n")
+        # Saved through a spreadsheet: M/D/YY dates and numbers in scientific notation.
+        z.writestr("2016/2016-02-02.csv", old + "2/2/16,A,M1,4.00079E+12,0,100,3\n")
         z.writestr("__MACOSX/2016/._2016-02-01.csv", "junk")
     return path
 
@@ -53,6 +55,9 @@ def test_ingest_writes_one_file_per_month_in_one_schema(tmp_path: Path) -> None:
     )
     months = {m["month"]: m for m in entry["months"]}
     assert set(months) == {"2016-01", "2016-02"}
+    feb = months["2016-02"]
+    assert (feb["days"], feb["date_disagrees"], feb["spreadsheet_rows"]) == (2, 1, 1)
+    assert feb["cast_failures"] == {}  # the date comes from the file name
     jan = months["2016-01"]
     assert (jan["rows"], jan["days"], jan["drives"], jan["failures"]) == (3, 2, 2, 1)
     assert jan["cast_failures"] == {"smart_5_raw": 1}  # "abc"; "12.0" casts to 12

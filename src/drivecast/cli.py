@@ -374,6 +374,32 @@ def sequence(
 
 
 @app.command()
+def staleness(
+    quarter: str,
+    gold: Annotated[str, typer.Option(help="Directory or URL prefix of the gold files.")] = str(
+        LAKE / "gold"
+    ),
+    out_dir: Annotated[Path, typer.Option("--out")] = Path("runs/staleness"),
+    threads: int = 4,
+) -> None:
+    """Score QUARTER with models deployed 0-4 and 8 quarters earlier, and with frozen ones."""
+    import duckdb
+
+    from drivecast.mlops.staleness import run_quarter
+
+    result = run_quarter(
+        duckdb.connect(), quarter, gold.rstrip("/"), threads=threads, models_out=out_dir / "models"
+    )
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / f"staleness_{quarter}.json").write_text(json.dumps(result, indent=2) + "\n")
+    for name, m in result["models"].items():
+        typer.echo(
+            f"{quarter} {name:16s} age {m['age']:2d}  AP {m['average_precision']:.3f}  "
+            f"drift {m['drift']['before']['psi_mean']:.3f}"
+        )
+
+
+@app.command()
 def version() -> None:
     """Print the package version."""
     typer.echo(__version__)

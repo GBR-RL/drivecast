@@ -3,7 +3,8 @@ name: Staleness
 # For every test quarter, LightGBM models deployed 0, 1, 2, 3, 4 and 8 quarters earlier and the
 # models frozen at the first deployment (2015Q2) score the whole quarter; each model's drift
 # from the data it was trained on is recorded. The results make every retraining policy
-# computable. The quarter's freshly fitted models are kept for the model registry.
+# computable. Results and the quarter's freshly fitted models (for the model registry) are
+# stored as assets of the MLOps release.
 on:
   workflow_dispatch:
     inputs:
@@ -13,6 +14,9 @@ on:
       gold:
         description: Release that holds the gold layer
         default: gold-v1
+      release:
+        description: Release that holds the MLOps results
+        default: mlops-v1
   pull_request:
     paths:
       - "src/drivecast/mlops/staleness.py"
@@ -20,10 +24,11 @@ on:
       - ".github/workflows/staleness.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   GOLD: ${{ inputs.gold || 'gold-v1' }}
+  RELEASE: ${{ inputs.release || 'mlops-v1' }}
 
 jobs:
   plan:
@@ -51,6 +56,12 @@ jobs:
           assert set(chosen) <= set(names), sorted(set(chosen) - set(names))
           print("quarters=" + json.dumps(chosen))
           PY
+      - name: Create the release that holds the results
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$RELEASE" >/dev/null 2>&1 || gh release create "$RELEASE"             --target "$GITHUB_SHA" --latest=false --title "MLOps ($RELEASE)"             --notes "Model staleness per test quarter (staleness_<quarter>.json), the models fitted for each quarter (lightgbm_<quarter>.txt, logreg_<quarter>.joblib) and the MLflow store with the model registry. Built by the Staleness and MLOps workflows from the gold release $GOLD."
 
   staleness:
     needs: plan
@@ -94,6 +105,15 @@ jobs:
           ls gold | wc -l
       - name: Score the quarter with models of every age
         run: drivecast staleness "${{ matrix.quarter }}" --gold gold --out out --threads 4
+      - name: Store the results and the models
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in 1 2 3; do
+            gh release upload "$RELEASE" out/staleness_*.json out/models/* --clobber && break
+            sleep $((attempt * 30))
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: staleness-${{ matrix.quarter }}

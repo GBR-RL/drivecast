@@ -90,7 +90,7 @@ def quality(
     con = connect(threads=threads, memory_limit=memory_limit, temp=RAW / "duckdb_tmp")
     files = register_bronze(con, lake)
     typer.echo(f"{len(files)} monthly files")
-    result = report.build(con)
+    result = report.build(con, files, RAW / "quality_work")
     for path in (out, json_out):
         path.parent.mkdir(parents=True, exist_ok=True)
     json_out.write_text(json.dumps(result, indent=2) + "\n")

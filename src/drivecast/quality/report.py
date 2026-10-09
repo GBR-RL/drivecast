@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from drivecast.quality import checks, published
@@ -9,11 +10,13 @@ from drivecast.quality import checks, published
 TOTALS = ("rows", "drives", "failures")
 
 
-def build(con: Any) -> dict[str, Any]:
-    (drives,) = con.execute("SELECT count(DISTINCT serial_number) FROM bronze").fetchone()
+def build(con: Any, files: list[str], work: Path) -> dict[str, Any]:
+    """Checks and reconciliation; ``files`` are the bronze months behind the view "bronze"."""
+    results = checks.run(con, files, work)
+    (drives,) = con.execute("SELECT count(*) FROM spans").fetchone()
     return {
         "drives": int(drives),
-        "checks": checks.run(con),
+        "checks": results,
         "partial_days": checks.partial_day_ranges(con),
         "reconciliation": published.reconcile(con),
     }

@@ -17,7 +17,7 @@ def row(day: str, serial: str, **values: Any) -> dict[str, Any]:
 
 
 def test_silver_applies_the_quality_rules(bronze: Callable[..., Any], tmp_path: Path) -> None:
-    con = bronze(
+    con, files = bronze(
         [
             row("2020-01-01", "A", smart_9_raw=1000),
             row("2020-01-02", "A", capacity_bytes=-1, smart_9_raw=1024),
@@ -31,8 +31,7 @@ def test_silver_applies_the_quality_rules(bronze: Callable[..., Any], tmp_path: 
         ]
     )
     drives = tmp_path / "drives.parquet"
-    bronze_file = (tmp_path / "bronze" / "drive_stats_test.parquet").as_posix()
-    assert silver.build_drives(con, [bronze_file, bronze_file], drives) == 4
+    assert silver.build_drives(con, files * 2, drives) == 4
     table = {
         r[0]: r[1:]
         for r in duckdb.sql(

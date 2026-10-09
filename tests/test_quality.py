@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from datetime import date, timedelta
+from pathlib import Path
 from typing import Any
 
 from drivecast.quality import checks, published, report
@@ -13,12 +14,13 @@ def row(day: str, serial: str, **values: Any) -> dict[str, Any]:
     return base | values
 
 
-def totals(con: Any) -> dict[str, int]:
-    return {name: r["total"] for name, r in checks.run(con).items()}
+def totals(made: tuple[Any, list[str]], work: Path) -> dict[str, int]:
+    con, files = made
+    return {name: r["total"] for name, r in checks.run(con, files, work).items()}
 
 
-def test_checks_count_each_problem(bronze: Callable[..., Any]) -> None:
-    con = bronze(
+def test_checks_count_each_problem(bronze: Callable[..., Any], tmp_path: Path) -> None:
+    made = bronze(
         [
             row("2026-03-29", "A", smart_9_raw=100),
             row("2026-03-30", "A", smart_9_raw=124),
@@ -33,7 +35,7 @@ def test_checks_count_each_problem(bronze: Callable[..., Any]) -> None:
             row("2026-03-30", "F", smart_5_normalized=300, smart_5_raw=-5),
         ]
     )
-    t = totals(con)
+    t = totals(made, tmp_path / "work")
     assert (t["rows"], t["failures"]) == (11, 1)
     assert t["duplicate_rows"] == 1
     assert t["reported_after_failure"] == 1
@@ -47,7 +49,7 @@ def test_checks_count_each_problem(bronze: Callable[..., Any]) -> None:
     assert t["several_failures"] == t["missing_key"] == t["failure_not_binary"] == 0
 
 
-def test_partial_and_missing_days(bronze: Callable[..., Any]) -> None:
+def test_partial_and_missing_days(bronze: Callable[..., Any], tmp_path: Path) -> None:
     start = date(2020, 1, 1)
     rows = []
     for d in range(12):
@@ -56,11 +58,11 @@ def test_partial_and_missing_days(bronze: Callable[..., Any]) -> None:
             continue  # no file for this day
         reporting = range(2) if d in (4, 5) else range(10)  # two days with an outage
         rows += [row(day, f"S{i}") for i in reporting]
-    con = bronze(rows)
-    t = totals(con)
+    made = bronze(rows)
+    t = totals(made, tmp_path / "work")
     assert t["partial_days"] == 2
     assert t["missing_days"] == 1
-    assert checks.partial_day_ranges(con) == [
+    assert checks.partial_day_ranges(made[0]) == [
         {"from": "2020-01-05", "to": "2020-01-06", "days": 2, "min_reports": 2, "alive": 10}
     ]
 
@@ -72,7 +74,7 @@ def test_reconciliation_applies_the_inclusion_rule(bronze: Callable[..., Any]) -
         rows.append(row(day, "D", model="M2"))  # one drive of its model: excluded
         rows.append(row(day, "X", model="DELLBOSS VD", capacity_bytes=480_036_847_616))
     rows.append(row("2026-03-30", "Z", failure=1))  # failed before the last day
-    con = bronze(rows)
+    con, _ = bronze(rows)
     pub = published.Published("2026Q1", "u", afr=1.0, min_drives=1, min_drive_days=0)
     ours = published.compute(con, pub)
     assert ours["last_day"] == "2026-03-31"
@@ -86,9 +88,11 @@ def test_quarter_bounds() -> None:
     assert published.quarter_bounds("2025Q4") == ("2025-10-01", "2026-01-01")
 
 
-def test_markdown_report_lists_checks_and_reconciliation(bronze: Callable[..., Any]) -> None:
-    con = bronze([row("2026-03-31", "A"), row("2026-03-31", "B", failure=1)])
-    md = report.markdown(report.build(con))
+def test_markdown_report_lists_checks_and_reconciliation(
+    bronze: Callable[..., Any], tmp_path: Path
+) -> None:
+    con, files = bronze([row("2026-03-31", "A"), row("2026-03-31", "B", failure=1)])
+    md = report.markdown(report.build(con, files, tmp_path / "work"))
     assert "| 2026 | 2 | 2 | 1 |" in md
     assert "Extra rows for a (serial number, date)" in md
     assert "[2026Q1](https://www.backblaze.com/blog/backblaze-drive-stats-for-q1-2026/)" in md

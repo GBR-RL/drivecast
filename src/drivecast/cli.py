@@ -469,6 +469,28 @@ def registry(
     typer.echo(json.dumps(summary, indent=2))
 
 
+@app.command("export-champion")
+def export_champion(
+    models_dir: Annotated[Path, typer.Option("--models", help="Fitted models per quarter.")],
+    out: Path = Path("model"),
+    store: Annotated[Path | None, typer.Option(help="MLflow store; else the latest LightGBM.")] = (
+        None
+    ),
+) -> None:
+    """Copy the model the registry's champion alias points to into a directory for serving."""
+    from drivecast.serve.model import export
+
+    typer.echo(json.dumps(export(models_dir, out, store)))
+
+
+@app.command()
+def serve(host: str = "127.0.0.1", port: int = 8000) -> None:
+    """Run the HTTP service (model from DRIVECAST_MODEL_DIR)."""
+    import uvicorn
+
+    uvicorn.run("drivecast.serve.app:app", host=host, port=port)
+
+
 @app.command()
 def version() -> None:
     """Print the package version."""

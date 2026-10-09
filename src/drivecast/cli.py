@@ -74,6 +74,31 @@ def manifest_merge(
 
 
 @app.command()
+def quality(
+    lake: Annotated[str, typer.Option(help='Bronze directory, or "release:<tag>".')] = str(
+        LAKE / "bronze"
+    ),
+    out: Annotated[Path, typer.Option(help="Markdown report.")] = Path("docs/quality.md"),
+    json_out: Annotated[Path, typer.Option("--json")] = Path("docs/results/quality.json"),
+    threads: int | None = None,
+    memory_limit: str | None = None,
+) -> None:
+    """Run the data-quality checks and the reconciliation over the bronze lake."""
+    from drivecast.lake.views import connect, register_bronze
+    from drivecast.quality import report
+
+    con = connect(threads=threads, memory_limit=memory_limit, temp=RAW / "duckdb_tmp")
+    files = register_bronze(con, lake)
+    typer.echo(f"{len(files)} monthly files")
+    result = report.build(con)
+    for path in (out, json_out):
+        path.parent.mkdir(parents=True, exist_ok=True)
+    json_out.write_text(json.dumps(result, indent=2) + "\n")
+    out.write_text(report.markdown(result), encoding="utf-8")
+    typer.echo(f"wrote {out} and {json_out}")
+
+
+@app.command()
 def version() -> None:
     """Print the package version."""
     typer.echo(__version__)

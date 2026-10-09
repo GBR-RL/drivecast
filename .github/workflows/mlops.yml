@@ -107,7 +107,16 @@ jobs:
           gh release download "${{ inputs.release }}" --dir models \
             --pattern 'lightgbm_*.txt' --pattern 'logreg_*.joblib'
           ls models | wc -l
-      - run: drivecast registry --backtest backtest --models models --gate gate.json --store mlflow
+      - name: Log everything through a local tracking server
+        run: |
+          mkdir -p mlflow/artifacts
+          mlflow server --backend-store-uri "sqlite:///$PWD/mlflow/mlflow.db" \
+            --artifacts-destination "$PWD/mlflow/artifacts" --host 127.0.0.1 --port 5000 \
+            > mlflow-server.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:5000/health && break; sleep 2; done
+          drivecast registry --backtest backtest --models models --gate gate.json --store mlflow \
+            --tracking-uri http://127.0.0.1:5000
+          kill %1 || true
       - name: Publish the MLflow store
         env:
           GH_TOKEN: ${{ github.token }}

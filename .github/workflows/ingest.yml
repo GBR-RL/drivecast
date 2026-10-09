@@ -13,6 +13,20 @@ on:
       release:
         description: Release that holds the lake
         default: lake-v1
+  workflow_call:
+    inputs:
+      sources:
+        description: Comma-separated source names, or all
+        type: string
+        default: "all"
+      release:
+        description: Release that holds the lake
+        type: string
+        default: "lake-v1"
+      latest:
+        description: Newest published quarter, when newer than the code knows (e.g. 2026Q3)
+        type: string
+        default: ""
   pull_request:
     paths:
       - "src/drivecast/lake/**"
@@ -22,6 +36,7 @@ permissions:
   contents: write
 
 env:
+  DRIVECAST_LATEST: ${{ inputs.latest }}
   RELEASE: ${{ inputs.release || 'lake-v1' }}
 
 jobs:
@@ -52,7 +67,7 @@ jobs:
           print("sources=" + json.dumps(chosen))
           EOF
       - name: Create the release that holds the lake
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -89,7 +104,7 @@ jobs:
             --manifest "manifest_${{ matrix.source }}.json" --threads 4 --memory-limit 12GB
           ls -la out
       - name: Upload the months to the lake
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -122,7 +137,7 @@ jobs:
           merge-multiple: true
           path: manifests
       - name: Add the entries of sources ingested by earlier runs
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release download "$RELEASE" --pattern 'manifest_*.json' --dir manifests --skip-existing
@@ -133,7 +148,7 @@ jobs:
           path: manifest.json
           retention-days: 90
       - name: Store the manifest with the lake
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "$RELEASE" manifest.json --clobber

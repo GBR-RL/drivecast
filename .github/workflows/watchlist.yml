@@ -1,0 +1,68 @@
+name: Watchlist
+
+# Scores every drive on the latest day in the lake with the deployed (champion) model and
+# publishes the riskiest drives as a page, CSV and JSON in the watchlist release.
+on:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      latest:
+        description: Newest published quarter, when newer than the code knows (e.g. 2026Q3)
+        type: string
+        default: ""
+
+permissions:
+  contents: write
+
+env:
+  DRIVECAST_LATEST: ${{ inputs.latest }}
+  MLFLOW_DISABLE_AGENT_HINT: "1"
+
+jobs:
+  watchlist:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install --quiet -e ".[serve,mlops]"
+      - name: Download the latest silver quarters and the champion model
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          read -r prev newest <<< "$(python -c "from drivecast.lake.sources import latest_name; from drivecast.features.build import previous_quarter as p; q = latest_name(); print(p(q), q)")"
+          gh release download silver-v1 --dir silver --pattern drives.parquet \
+            --pattern "silver_$prev.parquet" --pattern "silver_$newest.parquet"
+          if gh release download mlops-v1 --pattern mlflow-store.tar.gz --dir . 2>/dev/null; then
+            tar xzf mlflow-store.tar.gz
+            gh release download mlops-v1 --dir models --pattern 'lightgbm_*.txt' --pattern 'logreg_*.joblib'
+            drivecast export-champion --models models --store mlflow --out model
+          else
+            latest=$(gh release view mlops-v1 --json assets --jq '[.assets[].name|select(startswith("lightgbm_"))]|sort|last')
+            gh release download mlops-v1 --dir models --pattern "$latest"
+            drivecast export-champion --models models --out model
+          fi
+      - run: drivecast watchlist --silver silver --drives silver/drives.parquet --model model --out watchlist
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view watchlist >/dev/null 2>&1 || gh release create watchlist \
+            --target "$GITHUB_SHA" --latest=false --title "Drive watchlist" \
+            --notes "Every data drive on the latest day of the published Backblaze data, scored by the deployed model; the riskiest drives as index.html, watchlist.csv and watchlist.json. Updated by the Watchlist workflow."
+          gh release upload watchlist watchlist/index.html watchlist/watchlist.csv watchlist/watchlist.json --clobber
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          s = json.load(open("watchlist/watchlist.json"))
+          print(f"### Watchlist for {s['date']}\n")
+          print(f"{s['drives']:,} drives scored by {s['model']['family']} ({s['model']['quarter']}); "
+                f"{s['with_warnings']:,} with a SMART warning.\n")
+          print("| # | serial | model | age (y) | score | warnings |\n|---:|---|---|---:|---:|---|")
+          for r in s["top"][:15]:
+              print(f"| {r['rank']} | {r['serial_number']} | {r['model']} | {r['age_years']} | "
+                    f"{r['score']:.3f} | {r['warnings']} |")
+          PY

@@ -1,0 +1,112 @@
+name: Refresh
+
+# Continuous training. Every week, checks whether Backblaze has published a quarter newer than
+# the lake; if so, runs the pipeline for it: ingest, silver (with the drive table rebuilt),
+# features and the backtest for that quarter and the one before (whose labels the new data
+# completes), staleness, the gate and the model registry, a new image with the new champion,
+# and the watchlist. A quarter can also be given by hand to run the chain again for it.
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      quarter:
+        description: Run for this quarter (e.g. 2026Q2) instead of checking for a new one
+        default: ""
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    outputs:
+      quarter: ${{ steps.probe.outputs.quarter }}
+      quarters: ${{ steps.probe.outputs.quarters }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install --quiet -e .
+      - id: probe
+        env:
+          WANTED: ${{ inputs.quarter }}
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import os
+          from drivecast.features.build import previous_quarter
+          from drivecast.lake.sources import probe
+          quarter = os.environ.get("WANTED", "").strip()
+          if not quarter:
+              new = probe()
+              quarter = new[-1] if new else ""
+          print(f"quarter={quarter}")
+          print(f"quarters={previous_quarter(quarter)},{quarter}" if quarter else "quarters=")
+          PY
+      - name: Report
+        run: |
+          if [ -n "${{ steps.probe.outputs.quarter }}" ]; then
+            echo "Running the pipeline for ${{ steps.probe.outputs.quarter }}." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No quarter newer than the lake has been published." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  ingest:
+    needs: probe
+    if: needs.probe.outputs.quarter != ''
+    uses: ./.github/workflows/ingest.yml
+    with:
+      sources: ${{ needs.probe.outputs.quarter }}
+      latest: ${{ needs.probe.outputs.quarter }}
+
+  silver:
+    needs: [probe, ingest]
+    uses: ./.github/workflows/silver.yml
+    with:
+      quarters: ${{ needs.probe.outputs.quarters }}
+      latest: ${{ needs.probe.outputs.quarter }}
+
+  features:
+    needs: [probe, silver]
+    uses: ./.github/workflows/features.yml
+    with:
+      quarters: ${{ needs.probe.outputs.quarters }}
+      latest: ${{ needs.probe.outputs.quarter }}
+
+  backtest:
+    needs: [probe, features]
+    uses: ./.github/workflows/backtest.yml
+    with:
+      quarters: ${{ needs.probe.outputs.quarters }}
+      latest: ${{ needs.probe.outputs.quarter }}
+
+  staleness:
+    needs: [probe, features]
+    uses: ./.github/workflows/staleness.yml
+    with:
+      quarters: ${{ needs.probe.outputs.quarters }}
+      latest: ${{ needs.probe.outputs.quarter }}
+
+  mlops:
+    needs: [probe, backtest, staleness]
+    uses: ./.github/workflows/mlops.yml
+    with:
+      latest: ${{ needs.probe.outputs.quarter }}
+
+  deploy:
+    needs: mlops
+    uses: ./.github/workflows/deploy.yml
+
+  watchlist:
+    needs: [probe, deploy]
+    uses: ./.github/workflows/watchlist.yml
+    with:
+      latest: ${{ needs.probe.outputs.quarter }}

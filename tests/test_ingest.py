@@ -91,3 +91,23 @@ def test_manifests_merge_in_month_order(tmp_path: Path) -> None:
     merged = ingest.merge_manifests([entry("b", "2016-04", 2), entry("a", "2016-01", 3)])
     assert [e["source"] for e in merged["entries"]] == ["a", "b"]
     assert (merged["months"], merged["rows"], merged["failures"]) == (2, 5, 2)
+
+
+def test_newest_quarter_can_be_raised_and_probed(monkeypatch: pytest.MonkeyPatch) -> None:
+    import httpx
+
+    monkeypatch.setenv("DRIVECAST_LATEST", "2026Q4")
+    assert sources.latest_name() == "2026Q4"
+    assert sources.all_sources()[-1].name == "2026Q4"
+    monkeypatch.setenv("DRIVECAST_LATEST", "2020Q1")  # older than LATEST: ignored
+    assert sources.latest() == sources.LATEST
+    assert sources.by_name("2027Q1").url.endswith("/data_Q1_2027.zip")
+
+    published = {"data_Q3_2026.zip", "data_Q4_2026.zip"}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        name = request.url.path.rsplit("/", 1)[-1]
+        return httpx.Response(200 if name in published else 404)
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    assert sources.probe((2026, 2), client=client) == ["2026Q3", "2026Q4"]

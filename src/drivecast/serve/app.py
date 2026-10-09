@@ -91,7 +91,8 @@ def score(request: ScoreRequest) -> dict[str, Any]:
     model = _model()
     start = time.perf_counter()
     drives = [d.model_dump() for d in request.drives]
-    frame = last_day_features(duckdb.connect(), drives)
+    # One thread per request: requests are small and the workers already run in parallel.
+    frame = last_day_features(duckdb.connect(config={"threads": "1"}), drives)
     scores = model.score(frame)
     results = []
     for (_, row), s in zip(frame.iterrows(), scores, strict=True):

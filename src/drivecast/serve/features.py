@@ -38,8 +38,10 @@ def last_day_features(con: Any, drives: list[dict[str, Any]]) -> pd.DataFrame:
             rows.append({"serial_number": d["serial_number"], "model": d["model"],
                          "capacity_bytes": d.get("capacity_bytes"), **r})  # fmt: skip
     history = pd.DataFrame(rows)
-    for column in sorted(READING_COLUMNS - set(history.columns)):
-        history[column] = pd.Series([None] * len(history), dtype="Float64")
+    missing = sorted(READING_COLUMNS - set(history.columns))
+    history = history.reindex(columns=[*history.columns, *missing]).astype(
+        dict.fromkeys(missing, "Float64")
+    )
     history["date"] = pd.to_datetime(history["date"]).dt.date
     span_frame = pd.DataFrame(spans)
     span_frame["failure_date"] = pd.Series([None] * len(span_frame), dtype="object")

@@ -525,6 +525,15 @@ def watchlist(
 
 
 @app.command()
+def charts() -> None:
+    """Redraw the README charts (light and dark) from docs/results."""
+    from drivecast.report import charts as charts_module
+
+    for path in charts_module.all_charts():
+        typer.echo(f"wrote {path}")
+
+
+@app.command()
 def version() -> None:
     """Print the package version."""
     typer.echo(__version__)

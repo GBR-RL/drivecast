@@ -1,0 +1,24 @@
+# Environments and caches
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Data, models and run outputs (downloaded or generated; never committed)
+/data/
+/models/
+/runs/
+/mlruns/
+*.db
+*.db-journal
+spark-warehouse/
+metastore_db/
+
+# IDEs / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log

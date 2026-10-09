@@ -1,0 +1,139 @@
+name: Ingest
+
+# Bronze layer: every published Backblaze file is downloaded, cast to one schema and written as
+# monthly Parquet by its own runner. The Parquet files are stored as assets of a release (the
+# lake), and the per-file manifests are merged into one. On pull requests that touch the ingest,
+# the smallest file (2013) is ingested as a smoke test, without uploading anything.
+on:
+  workflow_dispatch:
+    inputs:
+      sources:
+        description: Comma-separated source names (e.g. 2013,2016Q1), or "all"
+        default: all
+      release:
+        description: Release that holds the lake
+        default: lake-v1
+  pull_request:
+    paths:
+      - "src/drivecast/lake/**"
+      - ".github/workflows/ingest.yml"
+
+permissions:
+  contents: write
+
+env:
+  RELEASE: ${{ inputs.release || 'lake-v1' }}
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    outputs:
+      sources: ${{ steps.plan.outputs.sources }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install --quiet -e .
+      - id: plan
+        env:
+          WANTED: ${{ github.event_name == 'pull_request' && '2013' || inputs.sources }}
+        run: |
+          python - <<'EOF' >> "$GITHUB_OUTPUT"
+          import json, os
+          from drivecast.lake.sources import all_sources
+          names = [s.name for s in all_sources()]
+          wanted = os.environ["WANTED"].strip()
+          chosen = names if wanted == "all" else [n.strip() for n in wanted.split(",")]
+          unknown = sorted(set(chosen) - set(names))
+          assert not unknown, f"unknown sources: {unknown}"
+          print("sources=" + json.dumps(chosen))
+          EOF
+      - name: Create the release that holds the lake
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$RELEASE" >/dev/null 2>&1 || gh release create "$RELEASE" \
+            --target "$GITHUB_SHA" --latest=false --title "Lake: bronze ($RELEASE)" \
+            --notes "Backblaze Drive Stats as monthly Parquet in one schema (bronze layer). Source: Backblaze, https://www.backblaze.com/cloud-storage/resources/hard-drive-test-data. Written by the Ingest workflow; see manifest.json for row counts and SHA-256 of every file."
+
+  ingest:
+    needs: plan
+    name: Ingest ${{ matrix.source }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        source: ${{ fromJSON(needs.plan.outputs.sources) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install --quiet -e .
+      - name: Scratch space on the larger disk
+        run: |
+          if [ -d /mnt ] && sudo mkdir -p /mnt/work; then sudo chown "$USER" /mnt/work; echo "WORK=/mnt/work" >> "$GITHUB_ENV"
+          else echo "WORK=$RUNNER_TEMP/work" >> "$GITHUB_ENV"; fi
+          df -h / /mnt || true
+      - name: Ingest
+        run: |
+          drivecast ingest "${{ matrix.source }}" --out out --work "$WORK" \
+            --manifest "manifest_${{ matrix.source }}.json" --threads 4 --memory-limit 12GB
+          ls -la out
+      - name: Upload the months to the lake
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in 1 2 3; do
+            gh release upload "$RELEASE" out/*.parquet "manifest_${{ matrix.source }}.json" \
+              --clobber && break
+            sleep $((attempt * 30))
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: manifest-${{ matrix.source }}
+          path: manifest_${{ matrix.source }}.json
+          retention-days: 30
+
+  manifest:
+    needs: ingest
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install --quiet -e .
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: manifest-*
+          merge-multiple: true
+          path: manifests
+      - name: Add the entries of sources ingested by earlier runs
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "$RELEASE" --pattern 'manifest_*.json' --dir manifests --skip-existing
+      - run: drivecast manifest-merge manifests/manifest_*.json --out manifest.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: manifest
+          path: manifest.json
+          retention-days: 90
+      - name: Store the manifest with the lake
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$RELEASE" manifest.json --clobber

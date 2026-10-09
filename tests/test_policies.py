@@ -71,18 +71,21 @@ def test_gate_promotes_only_a_clearly_better_challenger() -> None:
 
 def test_registry_logs_runs_and_moves_the_champion_alias(tmp_path: Path) -> None:
     pytest.importorskip("mlflow")
-    import joblib
     import numpy as np
-    from sklearn.linear_model import LogisticRegression
+    import pandas as pd
 
+    from drivecast.features.build import feature_names
     from drivecast.mlops import registry
+    from drivecast.mlops.staleness import save
+    from drivecast.models.estimators import LogReg
 
     models = tmp_path / "models"
     models.mkdir()
     rng = np.random.default_rng(0)
-    x, y = rng.normal(size=(50, 3)), rng.random(50) < 0.5
-    for q in ("2016Q1", "2016Q2"):
-        joblib.dump(LogisticRegression().fit(x, y), models / f"logreg_{q}.joblib")
+    x = pd.DataFrame(rng.normal(size=(60, len(feature_names()))), columns=feature_names())
+    y = rng.random(60) < 0.5
+    for q in ("2016Q1", "2016Q2"):  # the real pipeline, with its custom transform
+        save(LogReg().fit(x, y, np.ones(60)), models / f"logreg_{q}")
     model = {"average_precision": 0.1, "roc_auc": 0.8,
              "daily": {"25": {"precision": 0.3, "recall": 0.2}, "100": {"recall": 0.4}},
              "false_alarm": {"0.01": {"recall": 0.5}}}  # fmt: skip

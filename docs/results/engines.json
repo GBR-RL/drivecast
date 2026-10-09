@@ -1,0 +1,54 @@
+[
+  {
+    "quarter": "2016Q2",
+    "rows": 5839323,
+    "duckdb_seconds": 20.0,
+    "spark_seconds": 79.6,
+    "left_rows": 5839323,
+    "right_rows": 5839323,
+    "only_left": 0,
+    "only_right": 0,
+    "joined": 5839323,
+    "columns": 61,
+    "differing_values": {}
+  },
+  {
+    "quarter": "2019Q2",
+    "rows": 9646306,
+    "duckdb_seconds": 36.9,
+    "spark_seconds": 123.1,
+    "left_rows": 9646306,
+    "right_rows": 9646306,
+    "only_left": 0,
+    "only_right": 0,
+    "joined": 9646306,
+    "columns": 61,
+    "differing_values": {}
+  },
+  {
+    "quarter": "2022Q2",
+    "rows": 19061583,
+    "duckdb_seconds": 43.6,
+    "spark_seconds": 109.1,
+    "left_rows": 19061583,
+    "right_rows": 19061583,
+    "only_left": 0,
+    "only_right": 0,
+    "joined": 19061583,
+    "columns": 61,
+    "differing_values": {}
+  },
+  {
+    "quarter": "2025Q4",
+    "rows": 30560621,
+    "duckdb_seconds": 120.2,
+    "spark_seconds": 310.9,
+    "left_rows": 30560621,
+    "right_rows": 30560621,
+    "only_left": 0,
+    "only_right": 0,
+    "joined": 30560621,
+    "columns": 61,
+    "differing_values": {}
+  }
+]

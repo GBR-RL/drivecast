@@ -92,4 +92,7 @@ def markdown(report: dict[str, Any]) -> str:
                 f"| [{r['quarter']}]({r['source']}) | {field.replace('_', ' ')} | {_n(pub)} | "
                 f"{_n(ours)} | {_diff(pub, ours)} |"
             )
+    notes = [f"- {r['quarter']}: {r['note']}" for r in report["reconciliation"] if r.get("note")]
+    if notes:
+        lines += ["", *notes]
     return "\n".join(lines) + "\n"

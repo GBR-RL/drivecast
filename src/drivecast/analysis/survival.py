@@ -146,12 +146,23 @@ def curves(life: pd.DataFrame, by: str, groups: list[str], step: float = 0.1,
     return result
 
 
-def cox(life: pd.DataFrame, min_drives: int = 2000) -> dict[str, Any]:
-    """Cox model of the hazard by manufacturer, capacity and cohort, with late entry."""
+COX_SAMPLE = 100_000
+
+
+def cox(
+    life: pd.DataFrame, min_drives: int = 2000, sample: int | None = COX_SAMPLE, seed: int = 13
+) -> dict[str, Any]:
+    """Cox model of the hazard by manufacturer, capacity and cohort, with late entry.
+
+    Fitting with late entry is slow on half a million drives, so by default the model is fitted
+    on a fixed random sample of drives: the estimates stay unbiased, the intervals get wider.
+    """
     from lifelines import CoxPHFitter
 
     keep = life.groupby("manufacturer")["serial_number"].transform("size") >= min_drives
     d = life[keep].copy()
+    if sample is not None and len(d) > sample:
+        d = d.sample(sample, random_state=seed)
     d["start"] = d["entry_age"] / DAYS_PER_YEAR
     d["stop"] = d["exit_age"] / DAYS_PER_YEAR
     d["failed"] = d["failed"].astype(int)
@@ -168,6 +179,7 @@ def cox(life: pd.DataFrame, min_drives: int = 2000) -> dict[str, Any]:
     summary = model.summary[["exp(coef)", "exp(coef) lower 95%", "exp(coef) upper 95%", "p"]]
     return {
         "reference_manufacturer": reference,
+        "sampled": sample is not None and int(keep.sum()) > sample,
         "drives": len(x),
         "failures": int(x["failed"].sum()),
         "concordance": float(model.concordance_index_),

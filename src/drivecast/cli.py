@@ -390,7 +390,11 @@ def staleness(
     from drivecast.mlops.staleness import run_quarter
 
     result = run_quarter(
-        duckdb.connect(), quarter, gold.rstrip("/"), threads=threads, models_out=out_dir / "models"
+        duckdb.connect(config={"memory_limit": "4GB"}),
+        quarter,
+        gold.rstrip("/"),
+        threads=threads,
+        models_out=out_dir / "models",
     )
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / f"staleness_{quarter}.json").write_text(json.dumps(result, indent=2) + "\n")

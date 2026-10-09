@@ -1,0 +1,505 @@
+{
+  "margin": 0.05,
+  "promotions": 6,
+  "mean_test_ap": {
+    "always_rule": 0.028888596609653597,
+    "always_logreg": 0.10064919913512697,
+    "always_lightgbm": 0.10070939794200906,
+    "gate": 0.10672423902879885,
+    "oracle": 0.10801538365145599
+  },
+  "decisions": [
+    {
+      "quarter": "2015Q2",
+      "champion": "lightgbm",
+      "promoted": false,
+      "test_ap": 0.1037043327834845
+    },
+    {
+      "quarter": "2015Q3",
+      "champion": "lightgbm",
+      "promoted": false,
+      "test_ap": 0.1265763432386404
+    },
+    {
+      "quarter": "2015Q4",
+      "champion": "lightgbm",
+      "promoted": false,
+      "test_ap": 0.09005620965578973
+    },
+    {
+      "quarter": "2016Q1",
+      "champion": "lightgbm",
+      "promoted": false,
+      "test_ap": 0.08744950129065159
+    },
+    {
+      "quarter": "2016Q2",
+      "champion": "logreg",
+      "promoted": true,
+      "test_ap": 0.09559030333320663
+    },
+    {
+      "quarter": "2016Q3",
+      "champion": "logreg",
+      "promoted": false,
+      "test_ap": 0.08889734786490054
+    },
+    {
+      "quarter": "2016Q4",
+      "champion": "logreg",
+      "promoted": false,
+      "test_ap": 0.10542477362503506
+    },
+    {
+      "quarter": "2017Q1",
+      "champion": "logreg",
+      "promoted": false,
+      "test_ap": 0.09159465074906181
+    },
+    {
+      "quarter": "2017Q2",
+      "champion": "logreg",
+      "promoted": false,
+      "test_ap": 0.05916163016136519
+    },
+    {
+      "quarter": "2017Q3",
+      "champion": "logreg",
+      "promoted": false,
+      "test_ap": 0.10075362898665738
+    },
+    {
+      "quarter": "2017Q4",
+      "champion": "logreg",
+      "promoted": false,
+      "test_ap": 0.13440941742336823
+    },
+    {
+      "quarter": "2018Q1",
+      "champion": "logreg",
+      "promoted": false,
+      "test_ap": 0.07233458319417665
+    },
+    {
+      "quarter": "2018Q2",
+      "champion": "logreg",
+      "promoted": false,
+      "test_ap": 0.07781821027522452
+    },
+    {
+      "quarter": "2018Q3",
+      "champion": "logreg",
+      "promoted": false,
+      "test_ap": 0.09688940513632949
+    },
+    {
+      "quarter": "2018Q4",
+      "champion": "logreg",
+      "promoted": false,
+      "test_ap": 0.09682058681671266
+    },
+    {
+      "quarter": "2019Q1",
+      "champion": "logreg",
+      "promoted": false,
+      "test_ap": 0.10078345469094804
+    },
+    {
+      "quarter": "2019Q2",
+      "champion": "logreg",
+      "promoted": false,
+      "test_ap": 0.08805442286734087
+    },
+    {
+      "quarter": "2019Q3",
+      "champion": "logreg",
+      "promoted": false,
+      "test_ap": 0.13103429476186787
+    },
+    {
+      "quarter": "2019Q4",
+      "champion": "logreg",
+      "promoted": false,
+      "test_ap": 0.09272014601855769
+    },
+    {
+      "quarter": "2020Q1",
+      "champion": "logreg",
+      "promoted": false,
+      "test_ap": 0.06315187543023161
+    },
+    {
+      "quarter": "2020Q2",
+      "champion": "logreg",
+      "promoted": false,
+      "test_ap": 0.04291966564769133
+    },
+    {
+      "quarter": "2020Q3",
+      "champion": "lightgbm",
+      "promoted": true,
+      "test_ap": 0.05023452719820108
+    },
+    {
+      "quarter": "2020Q4",
+      "champion": "logreg",
+      "promoted": true,
+      "test_ap": 0.06696172338967814
+    },
+    {
+      "quarter": "2021Q1",
+      "champion": "logreg",
+      "promoted": false,
+      "test_ap": 0.06510240963999114
+    },
+    {
+      "quarter": "2021Q2",
+      "champion": "logreg",
+      "promoted": false,
+      "test_ap": 0.09462273923070685
+    },
+    {
+      "quarter": "2021Q3",
+      "champion": "logreg",
+      "promoted": false,
+      "test_ap": 0.09009002962749235
+    },
+    {
+      "quarter": "2021Q4",
+      "champion": "logreg",
+      "promoted": false,
+      "test_ap": 0.08669200072604519
+    },
+    {
+      "quarter": "2022Q1",
+      "champion": "logreg",
+      "promoted": false,
+      "test_ap": 0.09340549088260644
+    },
+    {
+      "quarter": "2022Q2",
+      "champion": "lightgbm",
+      "promoted": true,
+      "test_ap": 0.13110028837267534
+    },
+    {
+      "quarter": "2022Q3",
+      "champion": "logreg",
+      "promoted": true,
+      "test_ap": 0.160371228588175
+    },
+    {
+      "quarter": "2022Q4",
+      "champion": "logreg",
+      "promoted": false,
+      "test_ap": 0.15335131130142665
+    },
+    {
+      "quarter": "2023Q1",
+      "champion": "logreg",
+      "promoted": false,
+      "test_ap": 0.13145602610197996
+    },
+    {
+      "quarter": "2023Q2",
+      "champion": "logreg",
+      "promoted": false,
+      "test_ap": 0.1595673765980512
+    },
+    {
+      "quarter": "2023Q3",
+      "champion": "logreg",
+      "promoted": false,
+      "test_ap": 0.16184104048099002
+    },
+    {
+      "quarter": "2023Q4",
+      "champion": "logreg",
+      "promoted": false,
+      "test_ap": 0.14140893626155276
+    },
+    {
+      "quarter": "2024Q1",
+      "champion": "lightgbm",
+      "promoted": true,
+      "test_ap": 0.12552526127345254
+    },
+    {
+      "quarter": "2024Q2",
+      "champion": "lightgbm",
+      "promoted": false,
+      "test_ap": 0.13409624628766578
+    },
+    {
+      "quarter": "2024Q3",
+      "champion": "lightgbm",
+      "promoted": false,
+      "test_ap": 0.14565634525295865
+    },
+    {
+      "quarter": "2024Q4",
+      "champion": "lightgbm",
+      "promoted": false,
+      "test_ap": 0.1284149009435465
+    },
+    {
+      "quarter": "2025Q1",
+      "champion": "lightgbm",
+      "promoted": false,
+      "test_ap": 0.15046593457280721
+    },
+    {
+      "quarter": "2025Q2",
+      "champion": "lightgbm",
+      "promoted": false,
+      "test_ap": 0.12064178379311297
+    },
+    {
+      "quarter": "2025Q3",
+      "champion": "lightgbm",
+      "promoted": false,
+      "test_ap": 0.11278356790441096
+    },
+    {
+      "quarter": "2025Q4",
+      "champion": "lightgbm",
+      "promoted": false,
+      "test_ap": 0.07300407254453278
+    },
+    {
+      "quarter": "2026Q1",
+      "champion": "lightgbm",
+      "promoted": false,
+      "test_ap": 0.12110766424261446
+    },
+    {
+      "quarter": "2026Q2",
+      "champion": "lightgbm",
+      "promoted": false,
+      "test_ap": 0.1585450671300326
+    }
+  ],
+  "validation": {
+    "2015Q3": {
+      "rule": 0.060085470933158275,
+      "logreg": 0.07302343138132461,
+      "lightgbm": 0.12510701146096115
+    },
+    "2015Q4": {
+      "rule": 0.04340613220823964,
+      "logreg": 0.07961334684142701,
+      "lightgbm": 0.130496745432766
+    },
+    "2016Q1": {
+      "rule": 0.02075127768824641,
+      "logreg": 0.05180232180892861,
+      "lightgbm": 0.07239325559553132
+    },
+    "2016Q2": {
+      "rule": 0.042973345862834314,
+      "logreg": 0.11084118811945148,
+      "lightgbm": 0.08782366632457954
+    },
+    "2016Q3": {
+      "rule": 0.042333906971535044,
+      "logreg": 0.10202657596540071,
+      "lightgbm": 0.09917378630302931
+    },
+    "2016Q4": {
+      "rule": 0.03434657589320422,
+      "logreg": 0.0843520607511295,
+      "lightgbm": 0.07931605711125167
+    },
+    "2017Q1": {
+      "rule": 0.026428623538836613,
+      "logreg": 0.10779567610836766,
+      "lightgbm": 0.10729438901309758
+    },
+    "2017Q2": {
+      "rule": 0.03177118503996502,
+      "logreg": 0.09126498175231523,
+      "lightgbm": 0.06819997951748256
+    },
+    "2017Q3": {
+      "rule": 0.02190889179641704,
+      "logreg": 0.05346139103736447,
+      "lightgbm": 0.05599098060635076
+    },
+    "2017Q4": {
+      "rule": 0.03293286409828413,
+      "logreg": 0.1118663913314773,
+      "lightgbm": 0.08905874587919464
+    },
+    "2018Q1": {
+      "rule": 0.049583923646759204,
+      "logreg": 0.14358565304010623,
+      "lightgbm": 0.12773199579451003
+    },
+    "2018Q2": {
+      "rule": 0.023370285009584546,
+      "logreg": 0.08561522567839497,
+      "lightgbm": 0.07717229490624292
+    },
+    "2018Q3": {
+      "rule": 0.01814729762888454,
+      "logreg": 0.07393918303239175,
+      "lightgbm": 0.06697522661650081
+    },
+    "2018Q4": {
+      "rule": 0.028951979270741893,
+      "logreg": 0.10390854137911033,
+      "lightgbm": 0.0945377314609471
+    },
+    "2019Q1": {
+      "rule": 0.021307860655210998,
+      "logreg": 0.08494526029582557,
+      "lightgbm": 0.057046002405895635
+    },
+    "2019Q2": {
+      "rule": 0.02295521559028447,
+      "logreg": 0.10136671375780697,
+      "lightgbm": 0.09108880212424535
+    },
+    "2019Q3": {
+      "rule": 0.02381888217742554,
+      "logreg": 0.10284473616328343,
+      "lightgbm": 0.09068283864882211
+    },
+    "2019Q4": {
+      "rule": 0.03144286039542454,
+      "logreg": 0.14132320550199953,
+      "lightgbm": 0.12261243656614765
+    },
+    "2020Q1": {
+      "rule": 0.026571344399501665,
+      "logreg": 0.10276732938813318,
+      "lightgbm": 0.09569528485582889
+    },
+    "2020Q2": {
+      "rule": 0.010148182000909162,
+      "logreg": 0.07024655051337127,
+      "lightgbm": 0.03305503550490218
+    },
+    "2020Q3": {
+      "rule": 0.007486620221815099,
+      "logreg": 0.04285990318141304,
+      "lightgbm": 0.04627085717261566
+    },
+    "2020Q4": {
+      "rule": 0.013725393511810947,
+      "logreg": 0.06808946599297296,
+      "lightgbm": 0.054012850888788856
+    },
+    "2021Q1": {
+      "rule": 0.012230541668958006,
+      "logreg": 0.07259848595673782,
+      "lightgbm": 0.056261173766027156
+    },
+    "2021Q2": {
+      "rule": 0.014903812482271114,
+      "logreg": 0.06765728779114075,
+      "lightgbm": 0.06592794577831572
+    },
+    "2021Q3": {
+      "rule": 0.020708635839964996,
+      "logreg": 0.09230214830270005,
+      "lightgbm": 0.07967934560218973
+    },
+    "2021Q4": {
+      "rule": 0.02153022831208583,
+      "logreg": 0.09973856945907036,
+      "lightgbm": 0.08700214626108255
+    },
+    "2022Q1": {
+      "rule": 0.021973683376306043,
+      "logreg": 0.08397811076133159,
+      "lightgbm": 0.08514689360949985
+    },
+    "2022Q2": {
+      "rule": 0.027936575026525117,
+      "logreg": 0.08983217738158071,
+      "lightgbm": 0.10456221576757567
+    },
+    "2022Q3": {
+      "rule": 0.03944034478249262,
+      "logreg": 0.1482634686991677,
+      "lightgbm": 0.13555977080159015
+    },
+    "2022Q4": {
+      "rule": 0.03828031887844234,
+      "logreg": 0.1735224505499949,
+      "lightgbm": 0.1682505667389953
+    },
+    "2023Q1": {
+      "rule": 0.034355261985085206,
+      "logreg": 0.14844529884877108,
+      "lightgbm": 0.15047695484575255
+    },
+    "2023Q2": {
+      "rule": 0.042272305530090266,
+      "logreg": 0.15640500557146633,
+      "lightgbm": 0.1500217614044252
+    },
+    "2023Q3": {
+      "rule": 0.0620785770484767,
+      "logreg": 0.15736026245726806,
+      "lightgbm": 0.1545235396266686
+    },
+    "2023Q4": {
+      "rule": 0.04004752766262814,
+      "logreg": 0.1583610132080152,
+      "lightgbm": 0.15848672655456472
+    },
+    "2024Q1": {
+      "rule": 0.042744338163271625,
+      "logreg": 0.1572238937036667,
+      "lightgbm": 0.16917926478997372
+    },
+    "2024Q2": {
+      "rule": 0.03392219156493393,
+      "logreg": 0.12075132539342331,
+      "lightgbm": 0.1445331584317514
+    },
+    "2024Q3": {
+      "rule": 0.03289927884019089,
+      "logreg": 0.11911929881532583,
+      "lightgbm": 0.13383310977934137
+    },
+    "2024Q4": {
+      "rule": 0.039566885134733824,
+      "logreg": 0.13296367833469924,
+      "lightgbm": 0.1483726772202041
+    },
+    "2025Q1": {
+      "rule": 0.03274555837177197,
+      "logreg": 0.12201788209377454,
+      "lightgbm": 0.136149147278279
+    },
+    "2025Q2": {
+      "rule": 0.03607539312388691,
+      "logreg": 0.1280148605035594,
+      "lightgbm": 0.1596496699622257
+    },
+    "2025Q3": {
+      "rule": 0.026868917529036068,
+      "logreg": 0.10236134049510594,
+      "lightgbm": 0.1276308134612226
+    },
+    "2025Q4": {
+      "rule": 0.0211835502110691,
+      "logreg": 0.09377045407201448,
+      "lightgbm": 0.11499682262743176
+    },
+    "2026Q1": {
+      "rule": 0.01675290833260281,
+      "logreg": 0.075483139476521,
+      "lightgbm": 0.08361404179996097
+    },
+    "2026Q2": {
+      "rule": 0.023626934708861368,
+      "logreg": 0.10362782168619394,
+      "lightgbm": 0.11887705364602343
+    }
+  }
+}

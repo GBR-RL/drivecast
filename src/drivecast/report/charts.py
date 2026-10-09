@@ -213,18 +213,18 @@ def staleness(theme: str) -> Path:
     left.set_title("A kept model loses its edge", loc="left", color=t["ink"], fontsize=10)
     _style(right, t, grid="both")
     names = {"never": "never", "yearly": "yearly", "quarterly": "every quarter"}
-    offsets = {"never": (6, 2), "yearly": (-34, -3), "quarterly": (-62, 6)}
+    offsets = {"never": (6, 2), "yearly": (-30, -13), "quarterly": (-50, -14)}
     quarterly = next(p for p in pol["policies"] if p["policy"] == "quarterly")
     for p in pol["policies"]:
         drift = p["policy"].startswith("drift")
-        if drift and p["retrains"] >= quarterly["retrains"] - 2:
-            continue  # retrains almost every quarter: the same point as quarterly
+        if drift and p["retrains"] >= 0.8 * quarterly["retrains"]:
+            continue  # retrains almost every quarter: close to the quarterly point
         point = (p["retrains"], p["mean"]["average_precision"])
         right.scatter(*point, s=46, zorder=3, color=t["series"][1] if drift else t["series"][0],
                       edgecolor=t["surface"], linewidth=1.2)  # fmt: skip
         label = f"PSI > {p['policy'].split('>')[1]}" if drift else names[p["policy"]]
         right.annotate(label, point, fontsize=8, color=t["ink"], textcoords="offset points",
-                       xytext=(6, -11) if drift else offsets[p["policy"]])  # fmt: skip
+                       xytext=(-20, 7) if drift else offsets[p["policy"]])  # fmt: skip
     right.scatter([], [], color=t["series"][0], label="on a schedule")
     right.scatter([], [], color=t["series"][1], label="on drift")
     _legend(right, t, loc="lower right")

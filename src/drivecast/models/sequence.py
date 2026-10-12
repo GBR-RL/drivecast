@@ -98,15 +98,17 @@ class GRUModel:
 
         torch.manual_seed(self.seed)
         torch.set_num_threads(self.threads)
-        self.net = self._net()
+        self.device = pick_device()
+        self.net = self._net().to(self.device)
         opt = torch.optim.Adam(self.net.parameters(), lr=1e-3)
-        weights = torch.tensor(w / w.mean(), dtype=torch.float32)
-        target = torch.tensor(y, dtype=torch.float32)
-        data_seq, data_static = torch.from_numpy(seq), torch.from_numpy(static)
+        weights = torch.tensor(w / w.mean(), dtype=torch.float32, device=self.device)
+        target = torch.tensor(y, dtype=torch.float32, device=self.device)
+        data_seq = torch.from_numpy(seq).to(self.device)
+        data_static = torch.from_numpy(static).to(self.device)
         rng = np.random.default_rng(self.seed)
         self.losses = []
         for _ in range(self.epochs):
-            order = torch.from_numpy(rng.permutation(len(y)))
+            order = torch.from_numpy(rng.permutation(len(y))).to(self.device)
             total = 0.0
             for b in range(0, len(y), self.batch):
                 i = order[b : b + self.batch]
@@ -128,10 +130,23 @@ class GRUModel:
         out = []
         with torch.no_grad():
             for b in range(0, len(seq), 8192):
-                logits = self.net(torch.from_numpy(seq[b : b + 8192]),
-                                  torch.from_numpy(static[b : b + 8192]))  # fmt: skip
-                out.append(torch.sigmoid(logits).numpy())
+                part_seq = torch.from_numpy(seq[b : b + 8192]).to(self.device)
+                part_static = torch.from_numpy(static[b : b + 8192]).to(self.device)
+                logits = self.net(part_seq, part_static)
+                out.append(torch.sigmoid(logits).cpu().numpy())
         return np.concatenate(out).astype(np.float32)
+
+
+def pick_device() -> str:
+    """A CUDA GPU when one is present, else the CPU; DRIVECAST_DEVICE overrides it."""
+    import os
+
+    import torch
+
+    wanted = os.environ.get("DRIVECAST_DEVICE", "auto").strip().lower()
+    if wanted != "auto":
+        return wanted
+    return "cuda" if torch.cuda.is_available() else "cpu"
 
 
 def run_quarter(con: Any, test: str, gold: str, silver: str, scores: str, *,
